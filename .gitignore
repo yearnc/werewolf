@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment — contains API keys (even encrypted, don't commit)
+.env
+
+# Logs
+*.log
+
+# Compiled executables
+*.exe
+
+# IDE / editor
+.vscode/
+.idea/
+
+# Claude Code
+.claude/
+
+# OS
+Thumbs.db
+.DS_Store

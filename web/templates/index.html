@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>狼人杀 — Werewolf</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- Ambient particles -->
+    <div class="particles-container" id="particles"></div>
+
+    <div class="landing">
+        <div class="title-section">
+            <h1>狼人杀</h1>
+            <p class="subtitle">AI 驱动的 9 人狼人杀游戏</p>
+            <p class="tagline" id="tagline">天黑请闭眼...</p>
+        </div>
+
+        <div class="mode-cards">
+            <div class="mode-card" id="card-ai" onclick="startGame('ai')" tabindex="0" role="button" aria-label="AI 裁判模式">
+                <span class="mode-icon">🤖</span>
+                <h2>AI 裁判模式</h2>
+                <p>观看 9 名 AI 玩家自动进行完整的狼人杀对局</p>
+                <ul>
+                    <li>全自动推进</li>
+                    <li>观看 AI 推理和辩论</li>
+                    <li>上帝视角观看所有身份</li>
+                </ul>
+            </div>
+
+            <div class="mode-card" id="card-human" onclick="startGame('human')" tabindex="0" role="button" aria-label="人类玩家模式">
+                <span class="mode-icon">👤</span>
+                <h2>人类玩家模式</h2>
+                <p>扮演 9 名玩家之一，与 8 名 AI 玩家对决</p>
+                <ul>
+                    <li>随机分配身份</li>
+                    <li>夜晚发动技能</li>
+                    <li>白天发言投票</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Particle system
+    (function initParticles() {
+        const container = document.getElementById('particles');
+        const colors = ['gold', 'white', 'emerald'];
+        for (let i = 0; i < 25; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle ' + colors[Math.floor(Math.random() * colors.length)];
+            p.style.left = Math.random() * 100 + '%';
+            p.style.width = p.style.height = (Math.random() * 3 + 1.5) + 'px';
+            p.style.animationDuration = (Math.random() * 10 + 8) + 's';
+            p.style.animationDelay = Math.random() * 10 + 's';
+            container.appendChild(p);
+        }
+    })();
+
+    // Tagline rotation
+    const taglines = [
+        '天黑请闭眼...', '狼人请睁眼...', '预言家请查验...',
+        '女巫请用药...', '猎人请准备...', '今晚，谁会倒下？',
+        '谁是狼人？谁是好人？', '信任与背叛的博弈...',
+    ];
+    let idx = 0;
+    setInterval(() => {
+        idx = (idx + 1) % taglines.length;
+        const el = document.getElementById('tagline');
+        el.style.opacity = 0;
+        el.style.transform = 'translateY(-8px)';
+        setTimeout(() => {
+            el.textContent = taglines[idx];
+            el.style.opacity = 1;
+            el.style.transform = 'translateY(0)';
+        }, 500);
+    }, 4000);
+
+    let starting = false;
+
+    async function startGame(mode) {
+        if (starting) return;
+        starting = true;
+
+        const card = document.getElementById('card-' + mode);
+        card.classList.add('loading');
+
+        try {
+            const form = new FormData();
+            form.append('mode', mode);
+            await fetch('/api/start', { method: 'POST', body: form });
+            window.location.href = '/game?mode=' + mode;
+        } catch (err) {
+            starting = false;
+            card.classList.remove('loading');
+            console.error('Failed to start game:', err);
+        }
+    }
+
+    // Keyboard navigation for mode cards
+    document.querySelectorAll('.mode-card').forEach(card => {
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                card.click();
+            }
+        });
+    });
+    </script>
+</body>
+</html>
