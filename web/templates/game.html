@@ -7,8 +7,22 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    <!-- Ambient particles -->
+    <!-- Background layer -->
+    <div class="bg-layer"></div>
+
+    <!-- Moon -->
+    <div class="moon-container">
+        <div class="moon-disc" id="moon-disc"></div>
+    </div>
+
+    <!-- Forest silhouette -->
+    <div class="forest-silhouette"></div>
+
+    <!-- Ambient particles (fireflies) -->
     <div class="particles-container" id="particles"></div>
+
+    <!-- Mist layer -->
+    <div class="mist-layer"></div>
 
     <div id="app">
         <!-- Header -->
@@ -32,31 +46,30 @@
 
         <!-- Main content -->
         <div id="game-body">
-            <!-- Player sidebar (left) -->
+            <!-- Player portrait row (top, horizontal) -->
             <aside id="player-sidebar">
-                <div class="sidebar-title">玩家</div>
                 <div id="player-list">
                     <!-- Filled by JS -->
                 </div>
             </aside>
 
-            <!-- Center: event log + decision zone -->
+            <!-- Center: event scroll + decision altar -->
             <main id="game-main">
-                <!-- Event Log -->
+                <!-- Event scroll -->
                 <section id="event-log">
                     <div id="event-log-inner">
                         <!-- Filled by JS -->
                     </div>
                 </section>
 
-                <!-- Decision Zone -->
+                <!-- Decision altar -->
                 <section id="decision-zone" style="display:none">
                     <!-- Filled by JS -->
                 </section>
             </main>
         </div>
 
-        <!-- Role info overlay (human player mode) -->
+        <!-- Role reveal overlay (tarot card flip) -->
         <div id="role-overlay" style="display:none">
             <div class="role-card">
                 <h2>你的身份</h2>

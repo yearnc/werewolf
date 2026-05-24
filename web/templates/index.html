@@ -7,87 +7,120 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    <!-- Ambient particles -->
+    <!-- Background layer -->
+    <div class="bg-layer"></div>
+
+    <!-- Moon -->
+    <div class="moon-container">
+        <div class="moon-disc"></div>
+    </div>
+
+    <!-- Forest silhouette -->
+    <div class="forest-silhouette"></div>
+
+    <!-- Ambient particles (fireflies) -->
     <div class="particles-container" id="particles"></div>
+
+    <!-- Mist layer -->
+    <div class="mist-layer"></div>
 
     <div class="landing">
         <div class="title-section">
-            <h1>狼人杀</h1>
+            <h1>狼 人 杀</h1>
             <p class="subtitle">AI 驱动的 9 人狼人杀游戏</p>
             <p class="tagline" id="tagline">天黑请闭眼...</p>
         </div>
 
         <div class="mode-cards">
             <div class="mode-card" id="card-ai" onclick="startGame('ai')" tabindex="0" role="button" aria-label="AI 裁判模式">
-                <span class="mode-icon">🤖</span>
-                <h2>AI 裁判模式</h2>
-                <p>观看 9 名 AI 玩家自动进行完整的狼人杀对局</p>
-                <ul>
-                    <li>全自动推进</li>
-                    <li>观看 AI 推理和辩论</li>
-                    <li>上帝视角观看所有身份</li>
-                </ul>
+                <div class="mode-card-inner">
+                    <span class="mode-icon">🤖</span>
+                    <h2>AI 裁判模式</h2>
+                    <p>观看 9 名 AI 玩家自动进行完整的狼人杀对局</p>
+                    <ul>
+                        <li>全自动推进</li>
+                        <li>观看 AI 推理和辩论</li>
+                        <li>上帝视角观看所有身份</li>
+                    </ul>
+                </div>
             </div>
 
             <div class="mode-card" id="card-human" onclick="startGame('human')" tabindex="0" role="button" aria-label="人类玩家模式">
-                <span class="mode-icon">👤</span>
-                <h2>人类玩家模式</h2>
-                <p>扮演 9 名玩家之一，与 8 名 AI 玩家对决</p>
-                <ul>
-                    <li>随机分配身份</li>
-                    <li>夜晚发动技能</li>
-                    <li>白天发言投票</li>
-                </ul>
+                <div class="mode-card-inner">
+                    <span class="mode-icon">👤</span>
+                    <h2>人类玩家模式</h2>
+                    <p>扮演 9 名玩家之一，与 8 名 AI 玩家对决</p>
+                    <ul>
+                        <li>随机分配身份</li>
+                        <li>夜晚发动技能</li>
+                        <li>白天发言投票</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-    // Particle system
+    // Firefly particle system
     (function initParticles() {
-        const container = document.getElementById('particles');
-        const colors = ['gold', 'white', 'emerald'];
-        for (let i = 0; i < 25; i++) {
-            const p = document.createElement('div');
-            p.className = 'particle ' + colors[Math.floor(Math.random() * colors.length)];
+        var container = document.getElementById('particles');
+        var types = ['firefly', 'ember', 'moonbeam'];
+        for (var i = 0; i < 25; i++) {
+            var p = document.createElement('div');
+            p.className = 'particle ' + types[Math.floor(Math.random() * types.length)];
             p.style.left = Math.random() * 100 + '%';
             p.style.width = p.style.height = (Math.random() * 3 + 1.5) + 'px';
-            p.style.animationDuration = (Math.random() * 10 + 8) + 's';
-            p.style.animationDelay = Math.random() * 10 + 's';
+            p.style.animationDuration = (Math.random() * 14 + 8) + 's';
+            p.style.animationDelay = Math.random() * 15 + 's';
             container.appendChild(p);
         }
     })();
 
+    // Shooting stars (occasional)
+    (function initShootingStars() {
+        function createShootingStar() {
+            var star = document.createElement('div');
+            star.className = 'shooting-star';
+            star.style.top = (Math.random() * 30) + '%';
+            star.style.left = (Math.random() * 80 + 10) + '%';
+            star.style.animationDuration = (Math.random() * 1 + 1) + 's';
+            document.body.appendChild(star);
+            setTimeout(function () { star.remove(); }, 2000);
+        }
+        createShootingStar();
+        setInterval(function () {
+            if (Math.random() < 0.4) createShootingStar();
+        }, 8000);
+    })();
+
     // Tagline rotation
-    const taglines = [
+    var taglines = [
         '天黑请闭眼...', '狼人请睁眼...', '预言家请查验...',
         '女巫请用药...', '猎人请准备...', '今晚，谁会倒下？',
         '谁是狼人？谁是好人？', '信任与背叛的博弈...',
     ];
-    let idx = 0;
-    setInterval(() => {
+    var idx = 0;
+    setInterval(function () {
         idx = (idx + 1) % taglines.length;
-        const el = document.getElementById('tagline');
+        var el = document.getElementById('tagline');
         el.style.opacity = 0;
         el.style.transform = 'translateY(-8px)';
-        setTimeout(() => {
+        setTimeout(function () {
             el.textContent = taglines[idx];
             el.style.opacity = 1;
             el.style.transform = 'translateY(0)';
         }, 500);
     }, 4000);
 
-    let starting = false;
+    var starting = false;
 
     async function startGame(mode) {
         if (starting) return;
         starting = true;
-
-        const card = document.getElementById('card-' + mode);
+        var card = document.getElementById('card-' + mode);
         card.classList.add('loading');
-
         try {
-            const form = new FormData();
+            var form = new FormData();
             form.append('mode', mode);
             await fetch('/api/start', { method: 'POST', body: form });
             window.location.href = '/game?mode=' + mode;
@@ -98,9 +131,9 @@
         }
     }
 
-    // Keyboard navigation for mode cards
-    document.querySelectorAll('.mode-card').forEach(card => {
-        card.addEventListener('keydown', (e) => {
+    // Keyboard navigation
+    document.querySelectorAll('.mode-card').forEach(function (card) {
+        card.addEventListener('keydown', function (e) {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 card.click();
