@@ -14,7 +14,7 @@ load_dotenv(Path(__file__).parent / ".env")
 @dataclass
 class Config:
     llm_provider: str = "openai"
-    llm_model: str = "deepseek-chat"
+    llm_model: str = "deepseek-chat"  # 可改为 deepseek-v4-flash / deepseek-v4-pro
     llm_api_keys: list[str] = None  # type: ignore[assignment]
     llm_base_url: str | None = None
     llm_temperature: float = 0.6
