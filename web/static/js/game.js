@@ -1,11 +1,11 @@
-// === Werewolf Web UI — SSE client & rendering ===
+// === Werewolf Web UI — "月下狼影" SSE client & rendering ===
 
-let currentState = null;
-let eventCount = 0;
-let selectedTargets = [];
-let typingIndicator = null;
-let lastSpeechEventCount = 0;
-let typingTimeout = null;
+var currentState = null;
+var eventCount = 0;
+var selectedTargets = [];
+var typingIndicator = null;
+var lastSpeechEventCount = 0;
+var typingTimeout = null;
 
 // ── Avatar Colors ────────────────────────────────────
 
@@ -13,6 +13,11 @@ var AVATAR_COLORS = [
     '#e06060', '#e09830', '#b8b840', '#50b850', '#4098c0',
     '#6060d0', '#9858c0', '#d05898', '#50a098'
 ];
+
+var ROLE_ICONS = {
+    '村民': '👨‍🌾', '狼人': '🐺', '预言家': '🔮', '女巫': '🧪',
+    '猎人': '🏹', '白痴': '🤡', '守卫': '🛡️'
+};
 
 function getAvatarColor(playerId) {
     return AVATAR_COLORS[(playerId - 1) % AVATAR_COLORS.length];
@@ -26,19 +31,19 @@ function getPlayerRole(state, playerId) {
     return '';
 }
 
-// ── Particle System ──────────────────────────────────
+// ── Particle System (Fireflies & Embers) ─────────────
 
 (function initParticles() {
-    const container = document.getElementById('particles');
+    var container = document.getElementById('particles');
     if (!container) return;
-    const colors = ['gold', 'white', 'emerald'];
-    for (let i = 0; i < 20; i++) {
-        const p = document.createElement('div');
-        p.className = 'particle ' + colors[Math.floor(Math.random() * colors.length)];
+    var types = ['firefly', 'ember', 'moonbeam'];
+    for (var i = 0; i < 22; i++) {
+        var p = document.createElement('div');
+        p.className = 'particle ' + types[Math.floor(Math.random() * types.length)];
         p.style.left = Math.random() * 100 + '%';
         p.style.width = p.style.height = (Math.random() * 2.5 + 1) + 'px';
-        p.style.animationDuration = (Math.random() * 12 + 10) + 's';
-        p.style.animationDelay = Math.random() * 12 + 's';
+        p.style.animationDuration = (Math.random() * 14 + 8) + 's';
+        p.style.animationDelay = Math.random() * 15 + 's';
         container.appendChild(p);
     }
 })();
@@ -46,11 +51,12 @@ function getPlayerRole(state, playerId) {
 // ── SSE Connection ──────────────────────────────────
 
 function connectSSE() {
-    const es = new EventSource('/api/stream');
+    var es = new EventSource('/api/stream');
     es.onmessage = function (e) {
         try {
-            const state = JSON.parse(e.data);
+            var state = JSON.parse(e.data);
             if (state.error) { console.error(state.error); return; }
+            checkDeathEvents(state);
             currentState = state;
             renderState(state);
         } catch (err) {
@@ -62,6 +68,32 @@ function connectSSE() {
         es.close();
         setTimeout(connectSSE, 2000);
     };
+}
+
+// ── Blood Moon Trigger ───────────────────────────────
+
+var lastDeathCount = 0;
+
+function checkDeathEvents(state) {
+    if (!state.events || !state.players) return;
+    var deathEvts = state.events.filter(function (ev) {
+        return ev.type === 'death' || ev.type === 'eliminate';
+    });
+    if (deathEvts.length > lastDeathCount) {
+        lastDeathCount = deathEvts.length;
+        triggerBloodMoon();
+    }
+}
+
+function triggerBloodMoon() {
+    var moon = document.getElementById('moon-disc');
+    if (!moon) return;
+    moon.classList.add('blood-moon');
+    document.body.classList.add('blood-moon-active');
+    setTimeout(function () {
+        moon.classList.remove('blood-moon');
+        document.body.classList.remove('blood-moon-active');
+    }, 3000);
 }
 
 // ── Main Render ─────────────────────────────────────
@@ -87,18 +119,21 @@ function renderState(state) {
 function updateHeader(state) {
     if (state.phase == null) return;
 
-    // Phase-based body background class
-    const prevClass = document.body.className;
-    const newClass = (state.phase || 'setup') + '-phase';
-    if (prevClass !== newClass) {
+    var prevClass = document.body.className.replace(/blood-moon-active/g, '').trim();
+    var newClass = (state.phase || 'setup') + '-phase';
+    // Preserve blood-moon-active if present
+    if (document.body.classList.contains('blood-moon-active')) {
+        newClass += ' blood-moon-active';
+    }
+    if (prevClass !== newClass.replace(/\s+blood-moon-active/, '')) {
         document.body.className = newClass;
     }
 
-    const icons = {
+    var icons = {
         setup: '🃏', night: '🌙', day_announce: '☀️',
         sheriff_election: '🎖️', speaking: '🎤', voting: '🗳️', game_over: '🏁'
     };
-    const labels = {
+    var labels = {
         setup: '准备中', night: '夜晚', day_announce: '白天',
         sheriff_election: '警长竞选', speaking: '发言中', voting: '投票放逐', game_over: '游戏结束'
     };
@@ -115,7 +150,7 @@ function updateHeader(state) {
         dc.textContent = '第' + (state.day == null ? '?' : state.day) + '天';
     }
 
-    const sheriffBadge = document.getElementById('sheriff-badge');
+    var sheriffBadge = document.getElementById('sheriff-badge');
     if (state.sheriff_id) {
         sheriffBadge.style.display = '';
         document.getElementById('sheriff-name').textContent =
@@ -125,16 +160,16 @@ function updateHeader(state) {
     }
 }
 
-// ── Player Sidebar ──────────────────────────────────
+// ── Player Portrait Row ──────────────────────────────
 
 function updatePlayerGrid(state) {
     if (!state.players) return;
-    const list = document.getElementById('player-list');
+    var list = document.getElementById('player-list');
     if (!list) return;
     list.innerHTML = '';
 
     state.players.forEach(function (p) {
-        const card = document.createElement('div');
+        var card = document.createElement('div');
         card.className = 'player-card';
         if (p.is_alive) card.classList.add('alive');
         else card.classList.add('dead');
@@ -143,30 +178,37 @@ function updatePlayerGrid(state) {
         if (p.is_ally) card.classList.add('ally');
         card.setAttribute('data-player-id', p.id);
 
-        let badgeHtml = '';
+        var roleIcon = ROLE_ICONS[p.role] || '❓';
+        card.setAttribute('data-role-icon', roleIcon);
+
+        // Badge row
+        var badgeHtml = '<span class="player-status-badges">';
         if (p.is_sheriff) badgeHtml += '<span class="sheriff-star">⭐</span>';
         if (p.is_human) badgeHtml += '<span class="human-badge">👤</span>';
         if (p.is_ally) badgeHtml += '<span class="ally-badge">🐺</span>';
+        badgeHtml += '</span>';
+
+        // Status dot
+        var statusDot = p.is_alive
+            ? '<span class="player-status" style="color:var(--green-life);font-size:0.6em;">●</span>'
+            : '<span class="player-status" style="color:var(--blood-red);font-size:0.6em;">●</span>';
 
         card.innerHTML =
-            '<span class="player-card-index">' + p.id + '</span>' +
-            '<span class="player-card-info">' +
-                '<div class="player-role">' + p.role + '</div>' +
-                '<div class="player-status">' + (p.is_alive ? '生存' : '💀 死亡') + '</div>' +
-            '</span>' +
+            '<span class="player-card-index">' + p.id + '号</span>' +
+            statusDot +
             badgeHtml;
 
         list.appendChild(card);
     });
 }
 
-// ── Event Log ───────────────────────────────────────
+// ── Event Scroll ────────────────────────────────────
 
 var SPEECH_EVENT_TYPES = { speech: true, campaign_speech: true, wolf_discuss: true };
 
 function updateEventLog(state) {
-    const inner = document.getElementById('event-log-inner');
-    const events = state.events || [];
+    var inner = document.getElementById('event-log-inner');
+    var events = state.events || [];
     if (events.length === 0 || events.length === eventCount) return;
 
     if (events.length < eventCount) {
@@ -176,7 +218,6 @@ function updateEventLog(state) {
         removeTypingIndicator();
     }
 
-    // Check if new speech events were added (AI is "speaking")
     var newSpeechCount = 0;
     for (var i = eventCount; i < events.length; i++) {
         if (SPEECH_EVENT_TYPES[events[i].type]) newSpeechCount++;
@@ -192,15 +233,12 @@ function updateEventLog(state) {
     }
     eventCount = events.length;
 
-    // Show typing indicator if AI players are about to speak
-    // (when the phase is speaking/voting/campaign and no human decision pending)
     if (newSpeechCount > 0 && !state.waiting_for_human &&
         (state.phase === 'speaking' || state.phase === 'sheriff_election' || state.phase === 'voting')) {
         lastSpeechEventCount = eventCount;
-        // If no new events come in within 1.5s, show typing indicator
         clearTimeout(typingTimeout);
         typingTimeout = setTimeout(function () {
-            if (eventCount === lastSpeechEventCount && !currentState.waiting_for_human) {
+            if (eventCount === lastSpeechEventCount && currentState && !currentState.waiting_for_human) {
                 showTypingIndicator(inner);
             }
         }, 1500);
@@ -208,25 +246,23 @@ function updateEventLog(state) {
         removeTypingIndicator();
     }
 
-    // Show/hide waiting hint for multi-player AI decision phases
     updateWaitingHint(inner, state);
 
-    // Auto-scroll
-    const log = document.getElementById('event-log');
+    var log = document.getElementById('event-log');
     log.scrollTop = log.scrollHeight;
 }
+
+// ── Typing Indicator ────────────────────────────────
 
 function showTypingIndicator(inner) {
     if (typingIndicator) return;
     typingIndicator = document.createElement('div');
     typingIndicator.className = 'typing-indicator';
-    // Avatar
     var avatar = document.createElement('div');
     avatar.className = 'chat-avatar';
     avatar.textContent = '...';
     avatar.style.background = '#3a4a5a';
     typingIndicator.appendChild(avatar);
-    // Dots
     var dots = document.createElement('div');
     dots.className = 'typing-dots';
     dots.innerHTML = '<span></span><span></span><span></span>';
@@ -242,7 +278,7 @@ function removeTypingIndicator() {
     typingIndicator = null;
 }
 
-// ── Waiting Notice (header day-night box) ─────────────
+// ── Waiting Notice ──────────────────────────────────
 
 var MULTI_DECISION_PHASES = {
     sheriff_election: 'AI 玩家正在逐个参选、竞选宣言...',
@@ -263,6 +299,8 @@ function updateWaitingHint(inner, state) {
         notice.textContent = '';
     }
 }
+
+// ── Speech Bubble — Parchment Notes ─────────────────
 
 function renderSpeechBubble(inner, ev, state) {
     removeTypingIndicator();
@@ -289,18 +327,17 @@ function renderSpeechBubble(inner, ev, state) {
     var row = document.createElement('div');
     row.className = 'chat-row ' + (isSelf ? 'self' : 'other');
 
-    // Avatar circle
+    // Mini portrait avatar
     var avatar = document.createElement('div');
     avatar.className = 'chat-avatar';
     avatar.textContent = playerNum;
     avatar.style.background = avatarColor;
     row.appendChild(avatar);
 
-    // Body: name + bubble
+    // Body: name + parchment note
     var body = document.createElement('div');
     body.className = 'chat-body';
 
-    // Name line
     var nameEl = document.createElement('div');
     nameEl.className = 'chat-name';
     if (isSelf) {
@@ -312,7 +349,7 @@ function renderSpeechBubble(inner, ev, state) {
     }
     body.appendChild(nameEl);
 
-    // Bubble
+    // Parchment note bubble
     var bubble = document.createElement('div');
     bubble.className = 'chat-bubble ' + (isSelf ? 'self' : 'other');
     if (isWolf) bubble.classList.add('wolf');
@@ -324,6 +361,8 @@ function renderSpeechBubble(inner, ev, state) {
     inner.appendChild(row);
 }
 
+// ── System Messages — Wax Seals & Heraldry ──────────
+
 function renderSystemMsg(inner, ev) {
     removeTypingIndicator();
     var div = document.createElement('div');
@@ -332,10 +371,10 @@ function renderSystemMsg(inner, ev) {
     inner.appendChild(div);
 }
 
-// ── Decision Zone ───────────────────────────────────
+// ── Decision Altar ──────────────────────────────────
 
 function updateDecisionZone(state) {
-    const zone = document.getElementById('decision-zone');
+    var zone = document.getElementById('decision-zone');
     if (!state.waiting_for_human) {
         zone.style.display = 'none';
         zone.innerHTML = '';
@@ -343,19 +382,19 @@ function updateDecisionZone(state) {
         return;
     }
 
-    const dtype = state.decision_type;
-    const ctx = state.decision_context || {};
-    const did = state.decision_id;
+    var dtype = state.decision_type;
+    var ctx = state.decision_context || {};
+    var did = state.decision_id;
 
     if (zone.dataset.decisionId === did && zone.style.display !== 'none') {
         return;
     }
 
-    const savedTarget = (selectedTargets.length > 0) ? selectedTargets[0] : null;
+    var savedTarget = (selectedTargets.length > 0) ? selectedTargets[0] : null;
 
     zone.dataset.decisionId = did;
     zone.style.display = '';
-    let html = '';
+    var html = '';
     switch (dtype) {
         case 'wolf_discussion':
             html = renderFreeSpeech(did, ctx, '🐺 狼人讨论发言', false);
@@ -370,7 +409,7 @@ function updateDecisionZone(state) {
             html = renderWitchDecision(did, ctx);
             break;
         case 'hunter_shot':
-            html = renderTargetSelect(did, ctx, '🔫 选择开枪目标（可选放弃）', true);
+            html = renderTargetSelect(did, ctx, '🏹 选择开枪目标（可选放弃）', true);
             break;
         case 'sheriff_candidacy':
             html = renderYesNo(did, ctx, '🎖️ 是否参加警长竞选？');
@@ -391,7 +430,7 @@ function updateDecisionZone(state) {
             html = renderTargetSelect(did, ctx, '🗳️ 选择放逐目标（可选弃票）', true, false);
             break;
         default:
-            html = '<p style="color:var(--text-secondary);padding:12px;">等待你的决策...</p>';
+            html = '<p style="color:var(--moon-silver);padding:12px;opacity:0.6;">等待你的决策...</p>';
     }
 
     zone.innerHTML = html;
@@ -399,13 +438,13 @@ function updateDecisionZone(state) {
 
     if (savedTarget != null) {
         selectedTargets = [savedTarget];
-        const btn = document.querySelector(
+        var btn = document.querySelector(
             '.target-btn[data-target="' + savedTarget + '"], .decision-btn.skip[data-target="' + savedTarget + '"]'
         );
         if (btn) {
             applySelectedInline(btn);
         }
-        const submitBtn = document.querySelector('.submit-targets');
+        var submitBtn = document.querySelector('.submit-targets');
         if (submitBtn) submitBtn.disabled = false;
     }
 }
@@ -413,7 +452,7 @@ function updateDecisionZone(state) {
 // ── Decision UI Renderers ───────────────────────────
 
 function renderTargetSelect(did, ctx, title, allowSkip, showContext) {
-    let html = '<div class="decision-title">' + title + '</div>';
+    var html = '<div class="decision-title">' + title + '</div>';
 
     if (showContext !== false) {
         if (ctx.death_summary) {
@@ -437,7 +476,7 @@ function renderTargetSelect(did, ctx, title, allowSkip, showContext) {
     }
 
     html += '<div class="decision-options">';
-    const targets = ctx.valid_targets || [];
+    var targets = ctx.valid_targets || [];
     targets.forEach(function (t) {
         html += '<button class="decision-btn target-btn" data-target="' + t.id + '">' + t.label + '</button>';
     });
@@ -454,7 +493,7 @@ function renderTargetSelect(did, ctx, title, allowSkip, showContext) {
 }
 
 function renderFreeSpeech(did, ctx, title, showContext) {
-    let html = '<div class="decision-title">' + title + '</div>';
+    var html = '<div class="decision-title">' + title + '</div>';
 
     if (showContext !== false) {
         if (ctx.death_summary) {
@@ -480,7 +519,7 @@ function renderFreeSpeech(did, ctx, title, showContext) {
 }
 
 function renderYesNo(did, ctx, title) {
-    let html = '<div class="decision-title">' + title + '</div>';
+    var html = '<div class="decision-title">' + title + '</div>';
 
     if (ctx.private_info) {
         html += '<div class="decision-context">' + ctx.private_info + '</div>';
@@ -500,7 +539,7 @@ function renderYesNo(did, ctx, title) {
 }
 
 function renderWitchDecision(did, ctx) {
-    let html = '<div class="decision-title">🧪 女巫用药决策</div>';
+    var html = '<div class="decision-title">🧪 女巫用药决策</div>';
 
     html += '<div class="decision-context">';
     html += '狼人击杀目标：' + ctx.attacked_label + '\n';
@@ -532,10 +571,10 @@ function renderWitchDecision(did, ctx) {
 
 function applySelectedInline(btn) {
     var s = btn.style;
-    s.setProperty('background', 'rgba(74, 222, 128, 0.18)', 'important');
+    s.setProperty('background', 'rgba(74, 222, 128, 0.15)', 'important');
     s.setProperty('border-color', '#4ade80', 'important');
     s.setProperty('color', '#ffffff', 'important');
-    s.setProperty('box-shadow', '0 0 20px rgba(74,222,128,0.3), inset 0 0 10px rgba(74,222,128,0.1)', 'important');
+    s.setProperty('box-shadow', '0 0 24px rgba(74,222,128,0.25), 0 0 0 1px rgba(74,222,128,0.1)', 'important');
     s.setProperty('transform', 'scale(1.03)', 'important');
     s.setProperty('font-weight', '700', 'important');
     btn.classList.add('selected');
@@ -591,7 +630,7 @@ function bindDecisionEvents(did, dtype, ctx) {
     var submitSpeech = document.getElementById('submit-speech');
     if (submitSpeech) {
         submitSpeech.addEventListener('click', function () {
-            const text = document.getElementById('speech-input').value.trim();
+            var text = document.getElementById('speech-input').value.trim();
             if (text) {
                 submitDecision(did, text);
             }
@@ -604,13 +643,12 @@ function bindDecisionEvents(did, dtype, ctx) {
         speechInput.addEventListener('keydown', function (e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                const text = this.value.trim();
+                var text = this.value.trim();
                 if (text) {
                     submitDecision(did, text);
                 }
             }
         });
-        // Auto-focus
         speechInput.focus();
     }
 
@@ -618,7 +656,7 @@ function bindDecisionEvents(did, dtype, ctx) {
     document.querySelectorAll('[data-value="true"], [data-value="false"]').forEach(function (btn) {
         if (btn.classList.contains('poison-target-btn') || btn.classList.contains('poison-select-btn')) return;
         btn.addEventListener('click', function () {
-            const val = this.getAttribute('data-value');
+            var val = this.getAttribute('data-value');
             submitDecision(did, val === 'true');
         });
     });
@@ -627,7 +665,7 @@ function bindDecisionEvents(did, dtype, ctx) {
     var poisonSelect = document.querySelector('.poison-select-btn');
     if (poisonSelect) {
         poisonSelect.addEventListener('click', function () {
-            const targets = document.querySelector('.poison-targets');
+            var targets = document.querySelector('.poison-targets');
             if (targets) targets.style.display = targets.style.display === 'none' ? '' : 'none';
         });
     }
@@ -635,7 +673,7 @@ function bindDecisionEvents(did, dtype, ctx) {
     // Witch poison target buttons
     document.querySelectorAll('.poison-target-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
-            const val = this.getAttribute('data-value');
+            var val = this.getAttribute('data-value');
             submitDecision(did, JSON.parse(val));
         });
     });
@@ -644,7 +682,7 @@ function bindDecisionEvents(did, dtype, ctx) {
     document.querySelectorAll('[data-value*="action"]').forEach(function (btn) {
         if (btn.classList.contains('poison-target-btn')) return;
         btn.addEventListener('click', function () {
-            const val = this.getAttribute('data-value');
+            var val = this.getAttribute('data-value');
             submitDecision(did, JSON.parse(val));
         });
     });
@@ -658,23 +696,23 @@ function clearSelection() {
 // ── Decision Submission ─────────────────────────────
 
 async function submitDecision(decisionId, value) {
-    const form = new FormData();
+    var form = new FormData();
     form.append('decision_id', decisionId);
     form.append('value', JSON.stringify(value));
     await fetch('/api/decision', { method: 'POST', body: form });
-    const zone = document.getElementById('decision-zone');
+    var zone = document.getElementById('decision-zone');
     zone.style.display = 'none';
-    zone.innerHTML = '<p style="color:var(--text-muted);padding:12px;text-align:center;">✔️ 决策已提交，等待游戏继续...</p>';
+    zone.innerHTML = '<p style="color:var(--moon-silver);padding:12px;text-align:center;opacity:0.6;">✔️ 决策已提交，等待游戏继续...</p>';
     clearSelection();
 }
 
-// ── Role Overlay ────────────────────────────────────
+// ── Role Overlay (Tarot Card Flip) ─────────────────
 
 function showRoleOverlay(info) {
-    const overlay = document.getElementById('role-overlay');
+    var overlay = document.getElementById('role-overlay');
     overlay.style.display = '';
-    let html = '<p>你的编号：<strong>玩家' + info.player_id + '号</strong></p>';
-    html += '<p>你的身份：<strong style="color:var(--gold);font-size:1.2em;">' + info.role + '</strong></p>';
+    var html = '<p>你的编号：<strong>玩家' + info.player_id + '号</strong></p>';
+    html += '<p style="font-size:1.2em;">你的身份：<strong style="color:var(--gold-crown);font-size:1.3em;">' + info.role + '</strong></p>';
     html += '<p>你的阵营：' + info.team + '</p>';
     html += '<p>你的能力：' + info.ability + '</p>';
     if (info.allies && info.allies.length) {
@@ -687,15 +725,19 @@ function dismissRoleInfo() {
     document.getElementById('role-overlay').style.display = 'none';
 }
 
-// ── Game Over ───────────────────────────────────────
+// ── Game Over — Dawn or Blood Moon ──────────────────
 
 function showGameOver(state) {
     if (document.getElementById('game-over-overlay')) return;
 
-    const isGoodWin = state.events && state.events.length &&
-        state.events[state.events.length - 1].text.includes('好人');
+    var isGoodWin = state.events && state.events.length &&
+        state.events[state.events.length - 1].text.indexOf('好人') >= 0;
 
-    let html = '<div class="game-over-overlay ' + (isGoodWin ? 'good-wins' : 'evil-wins') + '">';
+    var overlay = document.createElement('div');
+    overlay.id = 'game-over-overlay';
+    overlay.className = isGoodWin ? 'good-wins-bg' : 'evil-wins-bg';
+
+    var html = '<div class="game-over-overlay ' + (isGoodWin ? 'good-wins' : 'evil-wins') + '">';
     html += '<h2>' + (isGoodWin ? '🎉 好人阵营胜利！' : '🐺 狼人阵营胜利！') + '</h2>';
     html += '<div class="final-players">';
     state.players.forEach(function(p) {
@@ -705,13 +747,16 @@ function showGameOver(state) {
             '</div>';
     });
     html += '</div>';
-    html += '<p style="margin-top:20px"><a href="/" style="color:var(--gold);text-decoration:none;font-weight:600;font-size:1.05em;">🔙 返回首页再来一局</a></p>';
+    html += '<p style="margin-top:24px"><a href="/" style="color:var(--gold-crown);text-decoration:none;font-weight:600;font-size:1.05em;">🔙 返回首页再来一局</a></p>';
     html += '</div>';
 
-    const overlay = document.createElement('div');
-    overlay.id = 'game-over-overlay';
     overlay.innerHTML = html;
     document.body.appendChild(overlay);
+
+    // Blood moon for evil win
+    if (!isGoodWin) {
+        setTimeout(function () { triggerBloodMoon(); }, 500);
+    }
 }
 
 // ── Kickoff ─────────────────────────────────────────
