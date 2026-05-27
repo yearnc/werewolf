@@ -31,6 +31,22 @@
             <p class="tagline" id="tagline">天黑请闭眼...</p>
         </div>
 
+        <div class="difficulty-selector">
+            <span class="difficulty-label">AI 难度</span>
+            <div class="difficulty-options">
+                <button class="difficulty-btn active" id="diff-simple" onclick="setDifficulty('simple')" tabindex="0">
+                    <span class="diff-icon">🌱</span>
+                    <span class="diff-name">简单</span>
+                    <span class="diff-desc">Flash 轻量快速</span>
+                </button>
+                <button class="difficulty-btn" id="diff-hard" onclick="setDifficulty('hard')" tabindex="0">
+                    <span class="diff-icon">🔥</span>
+                    <span class="diff-name">困难</span>
+                    <span class="diff-desc">Pro 旗舰推理</span>
+                </button>
+            </div>
+        </div>
+
         <div class="mode-cards">
             <div class="mode-card" id="card-ai" onclick="startGame('ai')" tabindex="0" role="button" aria-label="AI 裁判模式">
                 <div class="mode-card-inner">
@@ -112,6 +128,14 @@
         }, 500);
     }, 4000);
 
+    var currentDifficulty = 'simple';  // 'simple' | 'hard'
+
+    function setDifficulty(level) {
+        currentDifficulty = level;
+        document.getElementById('diff-simple').classList.toggle('active', level === 'simple');
+        document.getElementById('diff-hard').classList.toggle('active', level === 'hard');
+    }
+
     var starting = false;
 
     async function startGame(mode) {
@@ -122,8 +146,9 @@
         try {
             var form = new FormData();
             form.append('mode', mode);
+            form.append('difficulty', currentDifficulty);
             await fetch('/api/start', { method: 'POST', body: form });
-            window.location.href = '/game?mode=' + mode;
+            window.location.href = '/game?mode=' + mode + '&difficulty=' + currentDifficulty;
         } catch (err) {
             starting = false;
             card.classList.remove('loading');
@@ -138,6 +163,36 @@
                 e.preventDefault();
                 card.click();
             }
+        });
+    });
+
+    // 3D tilt effect on mode cards
+    document.querySelectorAll('.mode-card').forEach(function (card) {
+        card.addEventListener('mousemove', function (e) {
+            var rect = card.getBoundingClientRect();
+            var x = e.clientX - rect.left;
+            var y = e.clientY - rect.top;
+            var centerX = rect.width / 2;
+            var centerY = rect.height / 2;
+            var rotateY = (x - centerX) / centerX * 6;
+            var rotateX = -(y - centerY) / centerY * 6;
+            card.style.transform = 'perspective(800px) rotateX(' + rotateX + 'deg) rotateY(' + rotateY + 'deg) translateY(-8px)';
+
+            // Update shine position
+            var shine = card.querySelector('.tilt-shine');
+            if (!shine) {
+                shine = document.createElement('div');
+                shine.className = 'tilt-shine';
+                card.appendChild(shine);
+            }
+            shine.style.background = 'radial-gradient(circle at ' + (x / rect.width * 100) + '% ' + (y / rect.height * 100) + '%, rgba(255,255,255,0.07) 0%, transparent 60%)';
+            shine.style.opacity = '1';
+        });
+
+        card.addEventListener('mouseleave', function () {
+            card.style.transform = '';
+            var shine = card.querySelector('.tilt-shine');
+            if (shine) shine.style.opacity = '0';
         });
     });
     </script>

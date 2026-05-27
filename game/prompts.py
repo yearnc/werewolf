@@ -482,6 +482,47 @@ def build_sheriff_campaign_prompt(
 你的竞选发言："""
 
 
+def build_sheriff_withdraw_prompt(
+    player_id: int,
+    role: Role,
+    candidates: list[int],
+    campaign_speeches: dict[int, str],
+    private_info: str,
+    death_summary: str = "",
+) -> str:
+    """Prompt for deciding whether to withdraw from sheriff election."""
+    other_candidates = [c for c in candidates if c != player_id]
+    other_list = ", ".join(f"{c}号" for c in other_candidates) if other_candidates else "无"
+    speeches_text = "\n".join(f"玩家{pid}号：{s}" for pid, s in campaign_speeches.items())
+
+    return f"""## 警长竞选 - 退水决定
+
+你是玩家{player_id}号，当前正在参与警长竞选。
+
+## 当前局势
+{death_summary}
+
+## 所有竞选发言
+{speeches_text}
+
+## 当前仍在警上的候选人
+{'、'.join(f'{c}号' for c in candidates)}
+
+## 其他候选人
+{other_list}
+
+{private_info}
+
+请决定是否退出警长竞选（退水）。考虑以下因素：
+- 你的发言是否有说服力，能否赢得其他玩家的信任
+- 其他候选人的发言质量如何，是否比你更值得当选
+- 如果你是狼人，是否需要隐藏身份；如果你有强身份，是否需要警徽
+- 如果没有人退水会导致票数分散，适当退水可以集中票数
+
+回复 with word "withdraw" 表示退水，回复 "stay" 表示留在警上。
+**只回复一个单词 (withdraw 或 stay)**："""
+
+
 def build_sheriff_vote_prompt(
     player_id: int,
     role: Role,
@@ -518,6 +559,43 @@ def build_sheriff_vote_prompt(
 
 候选人编号：{candidates}
 你的警长投票（只回复数字）："""
+
+
+def build_sheriff_destroy_badge_prompt(
+    player_id: int,
+    role: Role,
+    alive_ids: list[int],
+    recent_speeches: str,
+    recent_votes: str,
+    private_info: str,
+) -> str:
+    """Prompt for dying sheriff to decide whether to destroy the badge."""
+    alive_list = ", ".join(f"{i}号" for i in alive_ids)
+
+    return f"""## 警长死亡 - 撕警徽决定
+
+你是玩家{player_id}号（警长）。你即将死亡。
+
+在移交警徽之前，你可以选择**撕毁警徽**（销毁），这意味着本局将不再有警长。
+
+## 存活玩家
+{alive_list}
+
+## 近期发言
+{recent_speeches}
+
+## 近期投票
+{recent_votes}
+
+{private_info}
+
+请决定是撕毁警徽还是移交警徽。考虑以下因素：
+- 如果你没有信任的玩家，或者不想让对方阵营通过继承警徽获利，可以考虑撕毁
+- 如果你有明确信任的队友，交给他可以增加阵营的投票权重（警长1.5票+最后发言）
+- 撕毁警徽意味着1.5票权重和最后发言权永久消失
+
+回复 "destroy" 表示撕毁警徽，回复 "pass" 表示移交警徽。
+**只回复一个单词 (destroy 或 pass)**："""
 
 
 def build_sheriff_successor_prompt(

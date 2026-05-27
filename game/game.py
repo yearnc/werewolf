@@ -467,6 +467,54 @@ class Game:
         campaign_text = "\n".join(f"玩家{pid}号：{s}" for pid, s in campaign_speeches.items())
         self._emit_state()
 
+        # Step 2.5: Candidates may withdraw (退水)
+        if len(candidates) > 1:
+            logger.info("\n--- 退水环节 ---")
+            for pid in sorted(candidates):
+                if len(candidates) <= 1:
+                    break
+                player = self.players[pid - 1]
+                private = self._private_info(player)
+                withdraw = await player.sheriff_withdraw_decision(
+                    list(candidates), campaign_speeches, private, death_summary,
+                )
+                if withdraw:
+                    candidates.remove(pid)
+                    voters.append(pid)
+                    logger.info(self._public(f"🏳️ 玩家{pid}号({ROLE_DISPLAY[player.role]})：退水"))
+                    self._add_event("election", f"🏳️ 玩家{pid}号 退水，退出警长竞选")
+                    self._emit_state()
+
+        # After withdrawals: handle edge cases
+        if not candidates:
+            self.sheriff_id = random.choice(alive) if alive else None
+            if self.sheriff_id:
+                logger.info(f"所有候选人退水，随机指定 玩家{self.sheriff_id}号 为警长")
+            self._sheriff_election_done = True
+            self.speech_order = self._build_speech_order(alive)
+            self.phase = GamePhase.SPEAKING
+            return
+
+        if len(candidates) == 1:
+            self.sheriff_id = candidates[0]
+            sheriff_role = ROLE_DISPLAY[self._role_of(self.sheriff_id)]
+            logger.info(self._public(f"🎖️ 仅有 玩家{self.sheriff_id}号({sheriff_role}) 留在警上，自动当选警长！"))
+            self._add_event("election", f"🎖️ 其他候选人退水，玩家{self.sheriff_id}号({sheriff_role}) 自动当选警长！")
+            self._sheriff_log.append(f"第{self.day}天：玩家{self.sheriff_id}号自动当选警长（退水）")
+            self._sheriff_election_done = True
+            self.speech_order = self._build_speech_order(alive)
+            self.phase = GamePhase.SPEAKING
+            self._emit_state()
+            return
+
+        # Re-check voters after withdrawals
+        if not voters:
+            self.sheriff_id = random.choice(candidates)
+            self._sheriff_election_done = True
+            self.speech_order = self._build_speech_order(alive)
+            self.phase = GamePhase.SPEAKING
+            return
+
         # Step 3: Non-candidates vote for sheriff
         logger.info("\n--- 警长投票 ---")
         tasks = []
@@ -931,7 +979,7 @@ class Game:
         return shot_target
 
     async def _handle_sheriff_death(self, dead_pid: int) -> None:
-        """If the dead player was sheriff, let them pick a successor."""
+        """If the dead player was sheriff, let them choose to destroy or pass the badge."""
         if dead_pid != self.sheriff_id:
             return
         alive = self.alive_ids()
@@ -942,6 +990,19 @@ class Game:
         recent_s = self._all_recent_speeches()
         recent_v = self._all_recent_votes()
         private = self._private_info(sheriff_player)
+
+        # Ask dying sheriff whether to destroy the badge (撕警徽)
+        destroy = await sheriff_player.sheriff_destroy_badge_decision(
+            alive, recent_s, recent_v, private,
+        )
+        if destroy:
+            self.sheriff_id = None
+            logger.info(self._public(f"📛 警长{dead_pid}号死亡，选择撕毁警徽！本局不再有警长。"))
+            self._sheriff_log.append(f"警长{dead_pid}号死亡，撕毁警徽")
+            self._add_event("election", f"📛 警长{dead_pid}号死亡，撕毁警徽！警徽被销毁。")
+            self._emit_state()
+            return
+
         successor = await sheriff_player.sheriff_successor_decision(alive, recent_s, recent_v, private)
         if successor is not None and successor in alive:
             self.sheriff_id = successor

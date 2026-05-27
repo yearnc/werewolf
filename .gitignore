@@ -6,6 +6,9 @@ __pycache__/
 # Environment — contains API keys (even encrypted, don't commit)
 .env
 
+# Encryption key file — never commit
+.werewolf-key
+
 # Logs
 *.log
 

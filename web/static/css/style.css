@@ -382,6 +382,90 @@ body.blood-moon-active .moon-disc {
     z-index: -1;
 }
 
+/* === Difficulty Selector === */
+.difficulty-selector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 36px;
+    position: relative;
+    z-index: 1;
+}
+
+.difficulty-label {
+    color: rgba(200, 180, 150, 0.65);
+    font-size: 0.82em;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.difficulty-options {
+    display: flex;
+    gap: 12px;
+}
+
+.difficulty-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    background: rgba(20, 18, 24, 0.85);
+    border: 1px solid rgba(180, 160, 140, 0.12);
+    border-radius: var(--radius-md);
+    padding: 12px 22px;
+    cursor: pointer;
+    transition: all var(--transition-phase);
+    font-family: inherit;
+    color: rgba(200, 190, 170, 0.6);
+    min-width: 120px;
+    position: relative;
+    overflow: hidden;
+}
+
+.difficulty-btn:hover {
+    border-color: rgba(200, 170, 120, 0.3);
+    background: rgba(28, 24, 30, 0.9);
+    color: rgba(220, 210, 190, 0.85);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.difficulty-btn.active {
+    border-color: rgba(212, 168, 67, 0.45);
+    background: rgba(30, 24, 18, 0.92);
+    color: var(--gold-crown);
+    box-shadow: 0 0 18px rgba(212, 140, 40, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.difficulty-btn.active::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 20%;
+    right: 20%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(212, 168, 67, 0.5), transparent);
+}
+
+.diff-icon {
+    font-size: 1.4em;
+    line-height: 1;
+}
+
+.diff-name {
+    font-size: 0.9em;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+.diff-desc {
+    font-size: 0.7em;
+    opacity: 0.55;
+    letter-spacing: 0.5px;
+}
+
 /* === Torch Cards === */
 .mode-cards {
     display: flex;
@@ -390,9 +474,12 @@ body.blood-moon-active .moon-disc {
     flex-wrap: wrap;
     position: relative;
     z-index: 1;
+    perspective: 1200px;
 }
 
 .mode-card {
+    transform-style: preserve-3d;
+    transition: transform 0.15s ease-out, box-shadow 0.3s ease, border-color 0.3s ease;
     background: linear-gradient(180deg,
         rgba(28, 20, 14, 0.92) 0%,
         rgba(20, 14, 8, 0.95) 50%,
@@ -455,11 +542,22 @@ body.blood-moon-active .moon-disc {
 
 .mode-card:hover {
     border-color: rgba(200, 160, 100, 0.4);
-    transform: translateY(-10px);
     box-shadow:
         0 16px 50px rgba(0,0,0,0.6),
         0 0 50px rgba(240, 160, 48, 0.18),
         inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+/* Tilt shine overlay */
+.mode-card .tilt-shine {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: var(--radius-xl);
+    pointer-events: none;
+    z-index: 2;
+    background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.06) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
 }
 
 .mode-card:hover::after { opacity: 1; }
@@ -472,7 +570,7 @@ body.blood-moon-active .moon-disc {
     100% { transform: translateX(-50%) scaleY(1.35) scaleX(0.75); opacity: 1; }
 }
 
-.mode-card:active { transform: translateY(-3px); transition: transform 0.1s ease; }
+.mode-card:active { transition: transform 0.1s ease; }
 .mode-card.loading { pointer-events: none; opacity: 0.45; }
 .mode-card.loading::before { opacity: 0.3; }
 
@@ -500,7 +598,7 @@ body.blood-moon-active .moon-disc {
     line-height: 1.6;
 }
 
-.mode-card ul { list-style: none; font-size: 0.82em; color: rgba(180, 165, 140, 0.4); }
+.mode-card ul { list-style: none; font-size: 0.82em; color: rgba(190, 175, 150, 0.55); }
 
 .mode-card ul li {
     padding: 4px 0;
@@ -617,6 +715,36 @@ body.blood-moon-active .moon-disc {
 
 #day-night .separator { color: rgba(255, 255, 255, 0.1); margin: 0 4px; }
 
+#header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-self: end;
+}
+
+#btn-exit {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(180, 60, 60, 0.12);
+    color: rgba(220, 170, 160, 0.8);
+    border: 1px solid rgba(180, 60, 60, 0.2);
+    padding: 5px 12px;
+    border-radius: var(--radius-round);
+    font-size: 0.82em;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all var(--transition-phase);
+    white-space: nowrap;
+}
+
+#btn-exit:hover {
+    background: rgba(200, 50, 50, 0.25);
+    color: #ffcccc;
+    border-color: rgba(220, 80, 80, 0.4);
+    box-shadow: 0 0 12px rgba(200, 40, 40, 0.2);
+}
+
 #sheriff-badge {
     color: var(--gold-crown);
     font-size: 0.85em;
@@ -627,7 +755,6 @@ body.blood-moon-active .moon-disc {
     display: flex;
     align-items: center;
     gap: 6px;
-    justify-self: end;
 }
 
 /* === Game Body === */
@@ -777,6 +904,32 @@ body.blood-moon-active .moon-disc {
     box-shadow: 0 0 8px rgba(200, 40, 40, 0.15);
 }
 
+/* AI thinking pulse */
+.player-card.thinking {
+    border-color: rgba(139, 92, 246, 0.35) !important;
+    box-shadow: 0 0 22px rgba(139, 92, 246, 0.18) !important;
+    animation: thinkingPulse 1.2s ease-in-out infinite;
+}
+.player-card.thinking::before {
+    border-color: rgba(139, 92, 246, 0.5) !important;
+    box-shadow: 0 0 14px rgba(139, 92, 246, 0.3) !important;
+}
+@keyframes thinkingPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 22px rgba(139, 92, 246, 0.18); }
+    50%      { transform: scale(1.06); box-shadow: 0 0 36px rgba(139, 92, 246, 0.32); }
+}
+
+/* Death flicker animation — candle extinguish */
+.player-card.just-died {
+    animation: deathFlicker 0.8s ease-out;
+}
+@keyframes deathFlicker {
+    0%   { border-color: var(--blood-bright); box-shadow: 0 0 30px var(--blood-glow); filter: brightness(1.5); }
+    30%  { border-color: var(--blood-bright); box-shadow: 0 0 30px var(--blood-glow); filter: brightness(1.8); }
+    60%  { border-color: rgba(180, 40, 40, 0.4); box-shadow: 0 0 10px rgba(200, 30, 30, 0.15); filter: brightness(0.5); }
+    100% { border-color: rgba(160, 40, 40, 0.25); box-shadow: none; filter: brightness(0.4); }
+}
+
 /* Selectable for decisions */
 .player-card.selectable { cursor: pointer; }
 .player-card.selectable:hover {
@@ -897,6 +1050,42 @@ body.day-phase #event-log {
     gap: 3px;
 }
 
+/* Empty state placeholder */
+.event-log-empty {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+    z-index: 0;
+}
+.event-log-empty .empty-rune {
+    font-size: 2.2em;
+    opacity: 0.35;
+    animation: runeFloat 4s ease-in-out infinite;
+}
+.event-log-empty .empty-text {
+    color: rgba(190, 175, 145, 0.4);
+    font-size: 0.82em;
+    font-style: italic;
+    margin-top: 8px;
+    letter-spacing: 2px;
+}
+@keyframes runeFloat {
+    0%, 100% { transform: translateY(0); opacity: 0.25; }
+    50%      { transform: translateY(-10px); opacity: 0.45; }
+}
+
+/* Sheriff speaking highlight on event log */
+#event-log.sheriff-speaking {
+    border-color: rgba(212, 168, 67, 0.35) !important;
+    box-shadow:
+        inset 0 0 80px rgba(0, 0, 0, 0.35),
+        0 0 36px rgba(212, 168, 67, 0.15),
+        0 0 0 1px rgba(212, 168, 67, 0.08) !important;
+    transition: border-color 0.5s ease, box-shadow 0.5s ease;
+}
+
 /* ================================================================
    CHAT — Parchment Notes
    ================================================================ */
@@ -936,7 +1125,7 @@ body.day-phase #event-log {
 
 .chat-name {
     font-size: 0.68em;
-    color: rgba(190, 170, 140, 0.5);
+    color: rgba(200, 185, 160, 0.7);
     padding: 0 8px;
     font-weight: 500;
     font-style: italic;
@@ -1295,8 +1484,8 @@ body.day-phase #event-log {
 
 .decision-btn.skip {
     background: transparent;
-    border-color: rgba(255, 255, 255, 0.04);
-    color: rgba(200, 210, 225, 0.35);
+    border-color: rgba(255, 255, 255, 0.06);
+    color: rgba(200, 210, 225, 0.5);
 }
 
 .decision-btn.skip:hover {
@@ -1328,6 +1517,32 @@ body.day-phase #event-log {
 }
 
 .submit-targets:disabled, #submit-speech:disabled { opacity: 0.35; cursor: not-allowed; animation: none; }
+
+/* Decision submitted checkmark feedback */
+.decision-submitted-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(12, 16, 34, 0.85);
+    border-radius: var(--radius-lg);
+    z-index: 10;
+    animation: checkmarkReveal 0.4s ease-out;
+}
+.decision-submitted-check {
+    font-size: 2.8em;
+    animation: checkmarkPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes checkmarkReveal {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+@keyframes checkmarkPop {
+    0%   { transform: scale(0); opacity: 0; }
+    60%  { transform: scale(1.3); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
 
 .decision-textarea {
     width: 100%;
@@ -1463,6 +1678,13 @@ body.day-phase #event-log {
     background: radial-gradient(ellipse 50% 40% at 50% 35%, rgba(255, 200, 60, 0.1) 0%, rgba(8, 6, 2, 0.94) 80%);
 }
 
+/* No-game notice */
+#no-game-notice a:hover {
+    border-color: rgba(212, 168, 67, 0.6) !important;
+    box-shadow: 0 0 18px rgba(212, 168, 67, 0.15);
+    transform: translateY(-2px);
+}
+
 #game-over-overlay.evil-wins-bg {
     background: radial-gradient(ellipse 50% 40% at 50% 35%, rgba(220, 40, 40, 0.12) 0%, rgba(8, 2, 2, 0.95) 80%);
 }
@@ -1534,7 +1756,7 @@ body.day-phase #event-log {
 button:focus-visible, .mode-card:focus-visible { outline: 2px solid rgba(212, 168, 67, 0.5); outline-offset: 3px; }
 
 /* ================================================================
-   PHASE BACKGROUNDS
+   PHASE BACKGROUNDS & MOON TRANSITIONS
    ================================================================ */
 
 body.night-phase .bg-layer { background: var(--deepest-night); }
@@ -1542,42 +1764,96 @@ body.day-phase .bg-layer { background: #0e0c08; }
 body.setup-phase .bg-layer { background: var(--deepest-night); }
 body.election-phase .bg-layer { background: #0a0c16; }
 
+/* Moon fades during daytime, brightens during night */
+.moon-container {
+    transition: opacity 1.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+body.day-phase .moon-container {
+    opacity: 0.2;
+}
+body.night-phase .moon-container,
+body.setup-phase .moon-container {
+    opacity: 1;
+}
+body.election-phase .moon-container {
+    opacity: 0.75;
+}
+body.speaking-phase .moon-container {
+    opacity: 0.35;
+}
+body.voting-phase .moon-container {
+    opacity: 0.25;
+}
+body.game-over-phase .moon-container {
+    opacity: 0.6;
+}
+
 /* ================================================================
    RESPONSIVE
    ================================================================ */
 
 @media (max-width: 768px) {
     #app { padding: 6px 8px; gap: 6px; }
-    #game-header { padding: 8px 12px; }
-    #phase-indicator { font-size: 0.9em; }
-    #day-night { font-size: 0.72em; padding: 4px 10px; }
-    #sheriff-badge { font-size: 0.72em; padding: 4px 10px; }
+    #game-header { padding: 6px 10px; grid-template-columns: 1fr auto auto; gap: 4px; }
+    #phase-indicator { font-size: 0.85em; }
+    #phase-text { display: none; }
+    #phase-icon { font-size: 1.2em; }
+    #day-night { font-size: 0.68em; padding: 3px 8px; }
+    #sheriff-badge { font-size: 0.68em; padding: 3px 8px; }
+    #btn-exit { font-size: 0.68em; padding: 3px 8px; gap: 2px; }
+    #header-right { gap: 3px; }
 
-    .player-card { min-width: 42px; padding: 4px 3px; gap: 2px; }
-    .player-card::before { width: 28px; height: 28px; }
-    .player-card::after { font-size: 0.75em; line-height: 34px; top: 3px; }
-    .player-card-index { font-size: 0.68em; }
-    #player-list { gap: 3px; }
+    #player-sidebar { padding: 6px 6px; }
+    .player-card { min-width: 46px; padding: 4px 3px; gap: 2px; }
+    .player-card::before { width: 30px; height: 30px; }
+    .player-card::after { font-size: 0.8em; line-height: 34px; top: 3px; }
+    .player-card-index { font-size: 0.7em; }
+    #player-list { gap: 4px; }
 
-    #event-log { min-height: 240px; padding: 10px 12px; }
-    .chat-row { max-width: 90%; }
-    .chat-bubble { font-size: 0.8em; padding: 8px 10px; }
-    .chat-avatar { width: 24px; height: 24px; font-size: 0.6em; }
+    #event-log { min-height: 200px; padding: 10px 12px; }
+    .chat-row { max-width: 92%; }
+    .chat-bubble { font-size: 0.82em; padding: 8px 10px; }
+    .chat-avatar { width: 26px; height: 26px; font-size: 0.62em; }
 
     #decision-zone { padding: 14px 16px; }
-    .decision-btn { padding: 8px 14px; font-size: 0.83em; }
-    .decision-title { font-size: 0.9em; }
+    .decision-btn { padding: 8px 14px; font-size: 0.85em; }
+    .decision-title { font-size: 0.92em; }
+    .decision-context { font-size: 0.78em; }
 
     .landing { padding: 25px 14px; }
     .title-section h1 { font-size: 2em; letter-spacing: 5px; }
+    .difficulty-btn { min-width: 100px; padding: 10px 16px; }
+    .difficulty-btn .diff-name { font-size: 0.8em; }
+    .difficulty-btn .diff-desc { font-size: 0.65em; }
     .mode-card { width: 100%; max-width: 340px; }
     .moon-container { width: 130px; height: 130px; top: 3%; }
 
     .game-over-overlay h2 { font-size: 1.5em; }
+    .game-over-overlay { padding: 20px; }
+    .final-player { min-width: 80px; padding: 8px 14px; font-size: 0.8em; }
     .role-card { padding: 28px 20px; }
 }
 
 @media (max-width: 400px) {
+    #app { padding: 4px 4px; gap: 4px; }
+    #game-header { padding: 4px 8px; }
+    #phase-indicator { font-size: 0.75em; }
+    #day-night { font-size: 0.62em; padding: 2px 6px; }
+
+    .player-card { min-width: 38px; padding: 3px 2px; gap: 1px; }
+    .player-card::before { width: 24px; height: 24px; }
+    .player-card::after { font-size: 0.65em; line-height: 28px; top: 2px; }
+    .player-card-index { font-size: 0.6em; }
+    #player-list { gap: 2px; }
+
+    #event-log { min-height: 180px; padding: 8px 8px; }
+    .chat-row { max-width: 95%; }
+    .chat-bubble { font-size: 0.76em; padding: 6px 8px; }
+    .chat-system { font-size: 0.68em; padding: 6px 10px; }
+
+    #decision-zone { padding: 10px 12px; }
+    .decision-btn { padding: 7px 12px; font-size: 0.78em; }
+
     .landing { padding: 18px 10px; }
     .title-section h1 { font-size: 1.6em; letter-spacing: 3px; }
     .mode-card-inner { padding: 24px 14px; }
