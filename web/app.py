@@ -34,12 +34,18 @@ async def index(request: Request):
 
 
 @app.post("/api/start")
-async def start_game(mode: str = Form(...)):
+async def start_game(mode: str = Form(...), difficulty: str = Form("simple")):
     global runner
     config = Config.load()
     errors = config.validate()
     if errors:
         return JSONResponse({"error": "; ".join(errors)}, status_code=400)
+
+    # Override model based on difficulty
+    if difficulty == "hard":
+        config.llm_model = "deepseek-v4-pro"
+    else:
+        config.llm_model = "deepseek-v4-flash"
 
     runner = GameRunner(config)
     asyncio.create_task(runner.start_game(mode))
@@ -67,10 +73,18 @@ async def event_stream():
             return
 
         last_generation = 0
-        # On connect / reconnect, re-emit pending decision if any
+
+        # On connect / reconnect, re-emit current game state immediately
+        # Pending decision (if any) includes full state + decision context — send first
         pending = runner.awaiter.get_pending_decision()
         if pending:
+            last_generation = pending.get("generation", 0)
             yield f"data: {json.dumps(pending, ensure_ascii=False)}\n\n"
+        else:
+            current = runner.current_state()
+            if current:
+                last_generation = current.get("generation", 0)
+                yield f"data: {json.dumps(current, ensure_ascii=False)}\n\n"
 
         async for state in runner.awaiter.state_queue_iter():
             # Always forward waiting states
@@ -101,3 +115,12 @@ async def submit_decision(decision_id: str = Form(...), value: str = Form("")):
 
     success = runner.submit_decision(decision_id, parsed)
     return {"status": "ok" if success else "stale_decision"}
+
+
+@app.post("/api/stop")
+async def stop_game():
+    global runner
+    if runner is not None:
+        runner.stop()
+        runner = None
+    return {"status": "ok"}

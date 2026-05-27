@@ -55,7 +55,12 @@ function connectSSE() {
     es.onmessage = function (e) {
         try {
             var state = JSON.parse(e.data);
-            if (state.error) { console.error(state.error); return; }
+            if (state.error) {
+                console.error(state.error);
+                showNoGameState(state.error);
+                return;
+            }
+            hideNoGameState();
             checkDeathEvents(state);
             currentState = state;
             renderState(state);
@@ -70,9 +75,36 @@ function connectSSE() {
     };
 }
 
+function showNoGameState(msg) {
+    var body = document.getElementById('game-body');
+    if (!body || document.getElementById('no-game-notice')) return;
+    // Hide normal game UI
+    document.getElementById('player-sidebar').style.display = 'none';
+    document.getElementById('game-main').style.display = 'none';
+    var notice = document.createElement('div');
+    notice.id = 'no-game-notice';
+    notice.style.cssText = 'text-align:center;padding:60px 20px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';
+    notice.innerHTML =
+        '<div style="font-size:3em;opacity:0.4;">🌙</div>' +
+        '<p style="color:rgba(200,190,170,0.6);font-size:1.05em;">当前没有正在进行的游戏</p>' +
+        '<p style="color:rgba(200,190,170,0.35);font-size:0.8em;">' + (msg || '请返回首页开始新游戏') + '</p>' +
+        '<a href="/" style="color:var(--gold-crown);text-decoration:none;margin-top:12px;padding:8px 24px;border:1px solid rgba(212,168,67,0.3);border-radius:var(--radius-round);font-size:0.9em;transition:all var(--transition-smooth);">🔙 返回首页</a>';
+    body.appendChild(notice);
+}
+
+function hideNoGameState() {
+    var notice = document.getElementById('no-game-notice');
+    if (notice) notice.remove();
+    var sidebar = document.getElementById('player-sidebar');
+    var main = document.getElementById('game-main');
+    if (sidebar) sidebar.style.display = '';
+    if (main) main.style.display = '';
+}
+
 // ── Blood Moon Trigger ───────────────────────────────
 
 var lastDeathCount = 0;
+var lastDeathPlayerIds = {};
 
 function checkDeathEvents(state) {
     if (!state.events || !state.players) return;
@@ -82,7 +114,28 @@ function checkDeathEvents(state) {
     if (deathEvts.length > lastDeathCount) {
         lastDeathCount = deathEvts.length;
         triggerBloodMoon();
+
+        // Trigger death flicker on newly dead player cards
+        var currentDeathIds = {};
+        deathEvts.forEach(function (ev) {
+            if (ev.player_id) {
+                currentDeathIds[ev.player_id] = true;
+                if (!lastDeathPlayerIds[ev.player_id]) {
+                    animatePlayerDeath(ev.player_id);
+                }
+            }
+        });
+        lastDeathPlayerIds = currentDeathIds;
     }
+}
+
+function animatePlayerDeath(playerId) {
+    var card = document.querySelector('.player-card[data-player-id="' + playerId + '"]');
+    if (!card) return;
+    card.classList.add('just-died');
+    setTimeout(function () {
+        card.classList.remove('just-died');
+    }, 800);
 }
 
 function triggerBloodMoon() {
@@ -98,15 +151,18 @@ function triggerBloodMoon() {
 
 // ── Main Render ─────────────────────────────────────
 
+var _roleShown = false;
+
 function renderState(state) {
     updateHeader(state);
     updatePlayerGrid(state);
     updateEventLog(state);
     updateDecisionZone(state);
+    updateThinkingHighlight(state);
 
-    if (state.human_role_info && !state._role_shown) {
+    if (state.human_role_info && !_roleShown) {
         showRoleOverlay(state.human_role_info);
-        state._role_shown = true;
+        _roleShown = true;
     }
 
     if (state.game_over) {
@@ -209,7 +265,10 @@ var SPEECH_EVENT_TYPES = { speech: true, campaign_speech: true, wolf_discuss: tr
 function updateEventLog(state) {
     var inner = document.getElementById('event-log-inner');
     var events = state.events || [];
-    if (events.length === 0 || events.length === eventCount) return;
+    if (events.length === 0 || events.length === eventCount) {
+        ensureEventLogPlaceholder();
+        return;
+    }
 
     if (events.length < eventCount) {
         inner.innerHTML = '';
@@ -248,7 +307,23 @@ function updateEventLog(state) {
 
     updateWaitingHint(inner, state);
 
+    // Sheriff speaking highlight
     var log = document.getElementById('event-log');
+    if (state.sheriff_id && state.phase === 'speaking') {
+        var lastSpeechEv = null;
+        for (var i = events.length - 1; i >= 0; i--) {
+            if (SPEECH_EVENT_TYPES[events[i].type]) { lastSpeechEv = events[i]; break; }
+        }
+        if (lastSpeechEv && lastSpeechEv.player_id === state.sheriff_id) {
+            log.classList.add('sheriff-speaking');
+        } else {
+            log.classList.remove('sheriff-speaking');
+        }
+    } else {
+        log.classList.remove('sheriff-speaking');
+    }
+
+    ensureEventLogPlaceholder();
     log.scrollTop = log.scrollHeight;
 }
 
@@ -297,6 +372,61 @@ function updateWaitingHint(inner, state) {
     } else {
         notice.style.display = 'none';
         notice.textContent = '';
+    }
+}
+
+// ── AI Thinking Highlight ─────────────────────────────
+
+function updateThinkingHighlight(state) {
+    // Remove all thinking highlights first
+    document.querySelectorAll('.player-card.thinking').forEach(function (card) {
+        card.classList.remove('thinking');
+    });
+
+    if (state.waiting_for_human || state.game_over) return;
+
+    // Parse the latest event to find who's speaking/acting
+    var events = state.events || [];
+    if (events.length === 0) return;
+
+    var lastEv = events[events.length - 1];
+
+    // Highlight player currently giving campaign speech or regular speech
+    if ((lastEv.type === 'campaign_speech' || lastEv.type === 'speech') && lastEv.player_id) {
+        var card = document.querySelector('.player-card[data-player-id="' + lastEv.player_id + '"]');
+        if (card) card.classList.add('thinking');
+    }
+
+    // For election/vote phases, highlight based on the latest event type
+    if (lastEv.type === 'election' || lastEv.type === 'vote') {
+        // Look for the most recent action — check second-to-last event
+        if (events.length >= 2) {
+            var prevEv = events[events.length - 2];
+            if ((prevEv.type === 'campaign_speech' || prevEv.type === 'speech') && prevEv.player_id) {
+                var prevCard = document.querySelector('.player-card[data-player-id="' + prevEv.player_id + '"]');
+                if (prevCard) prevCard.classList.add('thinking');
+            }
+        }
+    }
+}
+
+// ── Event Log Empty State ─────────────────────────────
+
+function ensureEventLogPlaceholder() {
+    var log = document.getElementById('event-log');
+    var inner = document.getElementById('event-log-inner');
+    if (!log || !inner) return;
+
+    var existing = log.querySelector('.event-log-empty');
+    if (inner.children.length === 0 && !existing) {
+        var placeholder = document.createElement('div');
+        placeholder.className = 'event-log-empty';
+        placeholder.innerHTML =
+            '<div class="empty-rune">✦ ⬡ ✦</div>' +
+            '<div class="empty-text">等待夜幕降临...</div>';
+        log.appendChild(placeholder);
+    } else if (inner.children.length > 0 && existing) {
+        existing.remove();
     }
 }
 
@@ -417,8 +547,14 @@ function updateDecisionZone(state) {
         case 'campaign_speech':
             html = renderFreeSpeech(did, ctx, '🎤 发表竞选宣言', false);
             break;
+        case 'sheriff_withdraw':
+            html = renderSheriffWithdraw(did, ctx);
+            break;
         case 'sheriff_vote':
             html = renderTargetSelect(did, ctx, '🗳️ 选择你支持的警长候选人');
+            break;
+        case 'sheriff_destroy_badge':
+            html = renderDestroyBadge(did, ctx);
             break;
         case 'sheriff_successor':
             html = renderTargetSelect(did, ctx, '🎖️ 选择警徽继任者');
@@ -534,6 +670,53 @@ function renderYesNo(did, ctx, title) {
     html += '<div class="decision-options">' +
         '<button class="decision-btn primary" data-did="' + did + '" data-value="true">参选</button>' +
         '<button class="decision-btn skip" data-did="' + did + '" data-value="false">不参选</button>' +
+        '</div>';
+    return html;
+}
+
+function renderSheriffWithdraw(did, ctx) {
+    var html = '<div class="decision-title">🏳️ 退水决定</div>';
+
+    if (ctx.private_info) {
+        html += '<div class="decision-context">' + ctx.private_info + '</div>';
+    }
+
+    var candidates = ctx.candidates || [];
+    var speeches = ctx.campaign_speeches || {};
+    if (candidates.length > 0) {
+        html += '<div class="decision-context" style="font-size:0.78em;max-height:140px;overflow-y:auto;">';
+        html += '<strong>当前警上候选人：</strong>' + candidates.map(function(c){return c.label;}).join('、');
+        html += '<br><br><strong>竞选发言回顾：</strong><br>';
+        candidates.forEach(function(c) {
+            var sp = speeches[String(c.id)] || '';
+            if (sp) html += '<span style="color:var(--gold-crown);">' + c.label + '：</span>' + sp + '<br>';
+        });
+        html += '</div>';
+    }
+
+    html += '<div class="decision-options">' +
+        '<button class="decision-btn skip" data-did="' + did + '" data-value="true">🏳️ 退水</button>' +
+        '<button class="decision-btn primary" data-did="' + did + '" data-value="false">⚔️ 留在警上</button>' +
+        '</div>';
+    return html;
+}
+
+function renderDestroyBadge(did, ctx) {
+    var html = '<div class="decision-title">📛 撕警徽决定</div>';
+
+    if (ctx.private_info) {
+        html += '<div class="decision-context">' + ctx.private_info + '</div>';
+    }
+
+    html += '<div class="decision-context" style="color:rgba(255,180,140,0.8);">' +
+        '作为即将死亡的警长，你可以选择<strong>撕毁警徽</strong>。' +
+        '撕毁后本局不再有警长（无1.5票权重、无最后发言权）。' +
+        '如果你有信任的玩家，选择保留可以继续移交。' +
+        '</div>';
+
+    html += '<div class="decision-options">' +
+        '<button class="decision-btn skip" data-did="' + did + '" data-value="true">📛 撕毁警徽</button>' +
+        '<button class="decision-btn primary" data-did="' + did + '" data-value="false">🎖️ 保留并移交</button>' +
         '</div>';
     return html;
 }
@@ -696,14 +879,25 @@ function clearSelection() {
 // ── Decision Submission ─────────────────────────────
 
 async function submitDecision(decisionId, value) {
+    var zone = document.getElementById('decision-zone');
+
+    // Show checkmark feedback overlay
+    var overlay = document.createElement('div');
+    overlay.className = 'decision-submitted-overlay';
+    overlay.innerHTML = '<span class="decision-submitted-check">✔️</span>';
+    zone.appendChild(overlay);
+
     var form = new FormData();
     form.append('decision_id', decisionId);
     form.append('value', JSON.stringify(value));
     await fetch('/api/decision', { method: 'POST', body: form });
-    var zone = document.getElementById('decision-zone');
-    zone.style.display = 'none';
-    zone.innerHTML = '<p style="color:var(--moon-silver);padding:12px;text-align:center;opacity:0.6;">✔️ 决策已提交，等待游戏继续...</p>';
-    clearSelection();
+
+    // Collapse after brief delay
+    setTimeout(function () {
+        zone.style.display = 'none';
+        zone.innerHTML = '';
+        clearSelection();
+    }, 600);
 }
 
 // ── Role Overlay (Tarot Card Flip) ─────────────────
@@ -759,6 +953,17 @@ function showGameOver(state) {
     }
 }
 
+// ── Exit Game ────────────────────────────────────────
+
+document.getElementById('btn-exit').addEventListener('click', function () {
+    if (!confirm('确定要退出游戏并返回首页吗？\n当前游戏进度将会丢失。')) return;
+
+    fetch('/api/stop', { method: 'POST' })
+        .then(function () { window.location.href = '/'; })
+        .catch(function () { window.location.href = '/'; });
+});
+
 // ── Kickoff ─────────────────────────────────────────
 setupDecisionZoneDelegation();
+ensureEventLogPlaceholder();
 connectSSE();

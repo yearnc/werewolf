@@ -258,6 +258,24 @@ class HumanPlayer(Player):
                 return speech.strip()
             print("  发言不能为空")
 
+    async def sheriff_withdraw_decision(
+        self,
+        candidates: list[int],
+        campaign_speeches: dict[int, str],
+        private_info: str,
+        death_summary: str = "",
+    ) -> bool:
+        """Decide whether to withdraw from sheriff election."""
+        other = [c for c in candidates if c != self.player_id]
+        print(f"\n  ┌─ 🏳️ 退水决定 ───────────────────────────────────┐")
+        print(f"  │ 当前警上候选人：{'、'.join(f'{c}号' for c in candidates)}")
+        print(f"  │ 其他候选人：{'、'.join(f'{c}号' for c in other) if other else '无'}")
+        if private_info:
+            for line in private_info.split("\n"):
+                print(f"  │ {line}")
+        print(f"  └{'─' * 46}┘")
+        return await self._input_bool("  是否退水? (y/n): ")
+
     async def sheriff_vote_decision(
         self,
         candidates: list[int],
@@ -274,6 +292,23 @@ class HumanPlayer(Player):
                 print(f"  │ {line}")
         print(f"  └{'─' * 46}┘")
         return await self._input_choice("  请选择你要投票的警长候选人编号: ", valid)
+
+    async def sheriff_destroy_badge_decision(
+        self,
+        alive_ids: list[int],
+        recent_speeches: str,
+        recent_votes: str,
+        private_info: str,
+    ) -> bool:
+        """Dying sheriff decides whether to destroy the badge."""
+        print(f"\n  ┌─ 📛 撕警徽 ───────────────────────────────────┐")
+        print(f"  │ 你是警长，即将死亡。要撕毁警徽吗？")
+        print(f"  │ 撕毁后本局不再有警长（无1.5票+无最后发言权）")
+        if private_info:
+            for line in private_info.split("\n"):
+                print(f"  │ {line}")
+        print(f"  └{'─' * 46}┘")
+        return await self._input_bool("  撕毁警徽? (y/n): ")
 
     async def sheriff_successor_decision(
         self,
@@ -469,6 +504,15 @@ class WebHumanPlayer(HumanPlayer):
         self.memory.add_speech(Speech(self.player_id, f"(竞选警长) {speech}", 1))
         return speech
 
+    async def sheriff_withdraw_decision(
+        self, candidates, campaign_speeches, private_info, death_summary="",
+    ) -> bool:
+        return await self._awaiter.wait("sheriff_withdraw", {
+            "candidates": [{"id": c, "label": f"玩家{c}号"} for c in candidates],
+            "campaign_speeches": {str(k): v for k, v in campaign_speeches.items()},
+            "private_info": private_info,
+        })
+
     async def sheriff_vote_decision(
         self, candidates, campaign_speeches, private_info, death_summary="",
     ) -> int | None:
@@ -477,6 +521,16 @@ class WebHumanPlayer(HumanPlayer):
             "candidates": [{"id": c, "label": f"玩家{c}号"} for c in candidates],
             "valid_targets": self._alive_list(valid),
             "campaign_speeches": campaign_speeches,
+            "private_info": private_info,
+        })
+
+    async def sheriff_destroy_badge_decision(
+        self, alive_ids, recent_speeches, recent_votes, private_info,
+    ) -> bool:
+        return await self._awaiter.wait("sheriff_destroy_badge", {
+            "alive_players": self._alive_list(alive_ids),
+            "recent_speeches": recent_speeches,
+            "recent_votes": recent_votes,
             "private_info": private_info,
         })
 

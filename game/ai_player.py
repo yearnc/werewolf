@@ -288,6 +288,32 @@ class AIPlayer(Player):
         self.memory.add_speech(Speech(self.player_id, f"(竞选警长) {speech}", 1))
         return speech
 
+    async def sheriff_withdraw_decision(
+        self,
+        candidates: list[int],
+        campaign_speeches: dict[int, str],
+        private_info: str,
+        death_summary: str = "",
+    ) -> bool:
+        """Decide whether to withdraw from sheriff election. Returns True to withdraw."""
+        from prompts import build_sheriff_withdraw_prompt
+
+        prompt = build_sheriff_withdraw_prompt(
+            self.player_id, self.role, candidates,
+            campaign_speeches, private_info, death_summary,
+        )
+        system = _build_system(self.player_id, self.role)
+
+        import re
+        response = await self.llm.chat(system, prompt)
+        text = (response or "").strip().lower()
+        if re.search(r"\bstay\b", text):
+            return False
+        if re.search(r"\bwithdraw\b", text):
+            return True
+        # Default: stay in the race
+        return False
+
     async def sheriff_vote_decision(
         self,
         candidates: list[int],
@@ -312,6 +338,32 @@ class AIPlayer(Player):
         if target is None and valid_targets:
             target = random.choice(valid_targets)
         return target
+
+    async def sheriff_destroy_badge_decision(
+        self,
+        alive_ids: list[int],
+        recent_speeches: str,
+        recent_votes: str,
+        private_info: str,
+    ) -> bool:
+        """Dying sheriff decides whether to destroy the badge. Returns True to destroy."""
+        from prompts import build_sheriff_destroy_badge_prompt
+
+        prompt = build_sheriff_destroy_badge_prompt(
+            self.player_id, self.role, alive_ids,
+            recent_speeches, recent_votes, private_info,
+        )
+        system = _build_system(self.player_id, self.role)
+
+        import re
+        response = await self.llm.chat(system, prompt)
+        text = (response or "").strip().lower()
+        if re.search(r"\bpass\b", text):
+            return False
+        if re.search(r"\bdestroy\b", text):
+            return True
+        # Default: pass the badge
+        return False
 
     async def sheriff_successor_decision(
         self,
