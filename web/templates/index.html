@@ -24,39 +24,95 @@
     <!-- Mist layer -->
     <div class="mist-layer"></div>
 
+    <!-- Tavern floor -->
+    <div class="tavern-floor"></div>
+
+    <!-- Candle glow left & right -->
+    <div class="tavern-candleglow left"></div>
+    <div class="tavern-candleglow right"></div>
+
+    <!-- Wolf activity indicator -->
+    <div class="wolf-activity">
+        <span class="wolf-activity-dot"></span>
+        <span>今夜有狼出没...</span>
+    </div>
+
+    <!-- Screen glow overlay -->
+    <div class="screen-glow-overlay" id="screen-glow"></div>
+
+    <!-- Story fragments container -->
+    <div id="story-fragments"></div>
+
     <div class="landing">
         <div class="title-section">
-            <h1>狼 人 杀</h1>
+            <!-- Wolf silhouette SVG behind title -->
+            <div class="wolf-silhouette-svg">
+                <svg viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Ground/hill -->
+                    <ellipse cx="160" cy="180" rx="180" ry="40" fill="rgba(200,50,40,0.06)"/>
+                    <!-- Wolf body -->
+                    <path d="M100 140 Q120 80 160 75 Q200 80 220 140" fill="rgba(200,50,40,0.08)" stroke="none"/>
+                    <!-- Wolf head pointing up (howling) -->
+                    <path d="M145 90 L140 50 L148 55 L155 30 L162 55 L170 50 L165 90"
+                          fill="rgba(200,50,40,0.15)" stroke="none"/>
+                    <!-- Ears -->
+                    <path d="M140 55 L135 30 L148 50" fill="rgba(200,50,40,0.12)"/>
+                    <path d="M165 50 L170 30 L175 55" fill="rgba(200,50,40,0.12)"/>
+                    <!-- Snout -->
+                    <circle cx="155" cy="48" r="3" fill="rgba(200,50,40,0.18)"/>
+                    <!-- Tail -->
+                    <path d="M220 120 Q250 100 240 75 Q235 65 245 60"
+                          fill="none" stroke="rgba(200,50,40,0.1)" stroke-width="4" stroke-linecap="round"/>
+                    <!-- Stars around wolf -->
+                    <circle cx="130" cy="40" r="0.8" fill="rgba(255,255,255,0.3)"/>
+                    <circle cx="175" cy="25" r="0.6" fill="rgba(255,255,255,0.25)"/>
+                    <circle cx="150" cy="20" r="0.7" fill="rgba(255,255,255,0.2)"/>
+                </svg>
+            </div>
+
+            <h1>
+                <span class="title-blood">狼</span>
+                <span> </span>
+                <span class="title-blood">人</span>
+                <span> </span>
+                <span class="title-blood">杀</span>
+            </h1>
             <p class="subtitle">AI 驱动的 9 人狼人杀游戏</p>
             <p class="tagline" id="tagline">天黑请闭眼...</p>
         </div>
 
-        <div class="difficulty-selector">
-            <span class="difficulty-label">AI 难度</span>
-            <div class="difficulty-options">
-                <button class="difficulty-btn active" id="diff-simple" onclick="setDifficulty('simple')" tabindex="0">
-                    <span class="diff-icon">🌱</span>
-                    <span class="diff-name">简单</span>
-                    <span class="diff-desc">Flash 轻量快速</span>
-                </button>
-                <button class="difficulty-btn" id="diff-hard" onclick="setDifficulty('hard')" tabindex="0">
-                    <span class="diff-icon">🔥</span>
-                    <span class="diff-name">困难</span>
-                    <span class="diff-desc">Pro 旗舰推理</span>
-                </button>
+        <!-- IMPROVEMENT 3: Tarot Card Difficulty Selector -->
+        <div class="tarot-selector">
+            <span class="tarot-label">选择你的命运</span>
+            <div class="tarot-cards">
+                <div class="tarot-card active" id="tarot-simple" onclick="setDifficulty('simple', this)" tabindex="0">
+                    <div class="card-inner">
+                        <span class="card-icon">🌱</span>
+                        <span class="card-name">愚 者</span>
+                        <span class="card-sub">Flash 轻量快速</span>
+                    </div>
+                </div>
+                <div class="tarot-card" id="tarot-hard" onclick="setDifficulty('hard', this)" tabindex="0">
+                    <div class="card-inner">
+                        <span class="card-icon">🔥</span>
+                        <span class="card-name">死 神</span>
+                        <span class="card-sub">Pro 旗舰推理</span>
+                    </div>
+                </div>
             </div>
         </div>
 
+        <!-- Mode Cards — Original torch card design -->
         <div class="mode-cards">
             <div class="mode-card" id="card-ai" onclick="startGame('ai')" tabindex="0" role="button" aria-label="AI 裁判模式">
                 <div class="mode-card-inner">
                     <span class="mode-icon">🤖</span>
                     <h2>AI 裁判模式</h2>
-                    <p>观看 9 名 AI 玩家自动进行完整的狼人杀对局</p>
+                    <p>推开旁观者之门，观看 9 名 AI 玩家自动进行完整的狼人杀对局</p>
                     <ul>
                         <li>全自动推进</li>
                         <li>观看 AI 推理和辩论</li>
-                        <li>上帝视角观看所有身份</li>
+                        <li>上帝视角查看所有身份</li>
                     </ul>
                 </div>
             </div>
@@ -65,7 +121,7 @@
                 <div class="mode-card-inner">
                     <span class="mode-icon">👤</span>
                     <h2>人类玩家模式</h2>
-                    <p>扮演 9 名玩家之一，与 8 名 AI 玩家对决</p>
+                    <p>推开挑战者之门，扮演 9 名玩家之一，与 8 名 AI 玩家对决</p>
                     <ul>
                         <li>随机分配身份</li>
                         <li>夜晚发动技能</li>
@@ -74,14 +130,52 @@
                 </div>
             </div>
         </div>
+
+        <!-- IMPROVEMENT 5: Tavern motto -->
+        <p class="tavern-motto">月圆之夜，村庄的酒馆里聚集了九位村民…</p>
+
+        <!-- IMPROVEMENT 4: Role Gallery -->
+        <div class="role-gallery">
+            <p class="role-gallery-label">今夜可能的身份</p>
+            <div class="role-cards-fan" id="role-fan">
+                <!-- Filled by JS -->
+            </div>
+        </div>
     </div>
 
     <script>
-    // Firefly particle system
+    // ── Role Gallery Data ──────────────────────────────
+    var ROLES_DATA = [
+        { name: '狼人',   icon: '🐺', team: '狼人阵营', ability: '每晚可击杀一名玩家' },
+        { name: '狼人',   icon: '🐺', team: '狼人阵营', ability: '每晚与队友协商击杀目标' },
+        { name: '狼人',   icon: '🐺', team: '狼人阵营', ability: '伪装成村民，白天参与讨论' },
+        { name: '预言家', icon: '🔮', team: '神职',     ability: '每晚查验一名玩家的身份' },
+        { name: '女巫',   icon: '🧪', team: '神职',     ability: '拥有解药和毒药各一瓶' },
+        { name: '猎人',   icon: '🏹', team: '神职',     ability: '死亡时可开枪带走一名玩家' },
+        { name: '村民',   icon: '👨‍🌾', team: '村民',     ability: '通过发言和投票找出狼人' },
+        { name: '村民',   icon: '👨‍🌾', team: '村民',     ability: '认真听发言，分析线索' },
+        { name: '村民',   icon: '👨‍🌾', team: '村民',     ability: '用逻辑说服他人，投出狼人' },
+    ];
+
+    (function initRoleGallery() {
+        var fan = document.getElementById('role-fan');
+        ROLES_DATA.forEach(function(r) {
+            var card = document.createElement('div');
+            card.className = 'role-mini-card';
+            card.innerHTML =
+                '<span class="mini-icon">' + r.icon + '</span>' +
+                '<span class="mini-name">' + r.name + '</span>' +
+                '<span class="mini-team">' + r.team + '</span>' +
+                '<span class="mini-ability">' + r.ability + '</span>';
+            fan.appendChild(card);
+        });
+    })();
+
+    // ── Particle System (enhanced) ────────────────────
     (function initParticles() {
         var container = document.getElementById('particles');
         var types = ['firefly', 'ember', 'moonbeam'];
-        for (var i = 0; i < 25; i++) {
+        for (var i = 0; i < 30; i++) {
             var p = document.createElement('div');
             p.className = 'particle ' + types[Math.floor(Math.random() * types.length)];
             p.style.left = Math.random() * 100 + '%';
@@ -92,24 +186,79 @@
         }
     })();
 
-    // Shooting stars (occasional)
+    // ── Shooting Stars (Enhanced) ─────────────────────
     (function initShootingStars() {
+        var STORY_FRAGMENTS = [
+            '第三夜…村庄陷入恐慌…',
+            '狼人的嚎叫划破夜空…',
+            '预言家在月光下窥见真相…',
+            '女巫的坩埚冒着幽绿的气泡…',
+            '猎人的弓弦已经拉满…',
+            '昨晚没有人死亡，是个平安夜…',
+            '信任与背叛，只在一步之遥…',
+            '谁是狼人？谁是好人？',
+            '月色如水，杀戮无声…',
+            '守卫在黑暗中守望…',
+            '清晨的阳光揭开了新的牺牲者…',
+        ];
+
         function createShootingStar() {
+            var isBlood = Math.random() < 0.2;
             var star = document.createElement('div');
-            star.className = 'shooting-star';
-            star.style.top = (Math.random() * 30) + '%';
-            star.style.left = (Math.random() * 80 + 10) + '%';
-            star.style.animationDuration = (Math.random() * 1 + 1) + 's';
+            star.className = 'shooting-star-enhanced' + (isBlood ? ' blood-star' : '');
+            star.style.top = (Math.random() * 25) + '%';
+            star.style.left = (Math.random() * 70 + 15) + '%';
+            star.style.transform = 'rotate(-25deg)';
+
+            var head = document.createElement('div');
+            head.className = 'star-head';
+            star.appendChild(head);
+
+            var trail = document.createElement('div');
+            trail.className = 'star-trail';
+            trail.style.right = '2px';
+            star.appendChild(trail);
+
+            // Trail particles
+            var particlesDiv = document.createElement('div');
+            particlesDiv.className = 'star-particles';
+            for (var i = 0; i < 6; i++) {
+                var p = document.createElement('div');
+                p.className = 'star-particle';
+                p.style.right = (i * 12 + 5) + 'px';
+                p.style.animationDelay = (i * 0.08) + 's';
+                particlesDiv.appendChild(p);
+            }
+            star.appendChild(particlesDiv);
+
             document.body.appendChild(star);
             setTimeout(function () { star.remove(); }, 2000);
         }
+
         createShootingStar();
         setInterval(function () {
-            if (Math.random() < 0.4) createShootingStar();
-        }, 8000);
+            if (Math.random() < 0.35) createShootingStar();
+        }, 7000);
+
+        // ── Story Fragments ────────────────────────────
+        function spawnStoryFragment() {
+            var frag = document.createElement('div');
+            frag.className = 'story-fragment';
+            frag.textContent = STORY_FRAGMENTS[Math.floor(Math.random() * STORY_FRAGMENTS.length)];
+            frag.style.left = (Math.random() * 70 + 15) + '%';
+            frag.style.top = (Math.random() * 40 + 30) + '%';
+            frag.style.animationDuration = (Math.random() * 8 + 12) + 's';
+            document.getElementById('story-fragments').appendChild(frag);
+            setTimeout(function () { frag.remove(); }, 16000);
+        }
+
+        spawnStoryFragment();
+        setInterval(function () {
+            if (Math.random() < 0.5) spawnStoryFragment();
+        }, 9000);
     })();
 
-    // Tagline rotation
+    // ── Tagline Rotation ──────────────────────────────
     var taglines = [
         '天黑请闭眼...', '狼人请睁眼...', '预言家请查验...',
         '女巫请用药...', '猎人请准备...', '今晚，谁会倒下？',
@@ -128,14 +277,22 @@
         }, 500);
     }, 4000);
 
-    var currentDifficulty = 'simple';  // 'simple' | 'hard'
+    // ── Difficulty (Tarot) ────────────────────────────
+    var currentDifficulty = 'simple';
 
-    function setDifficulty(level) {
+    function setDifficulty(level, cardEl) {
         currentDifficulty = level;
-        document.getElementById('diff-simple').classList.toggle('active', level === 'simple');
-        document.getElementById('diff-hard').classList.toggle('active', level === 'hard');
+        // Flip animation
+        cardEl.classList.add('flipping');
+        setTimeout(function () { cardEl.classList.remove('flipping'); }, 700);
+
+        // Toggle active states
+        document.querySelectorAll('.tarot-card').forEach(function(c) {
+            c.classList.toggle('active', c === cardEl);
+        });
     }
 
+    // ── Start Game ────────────────────────────────────
     var starting = false;
 
     async function startGame(mode) {
@@ -156,7 +313,7 @@
         }
     }
 
-    // Keyboard navigation
+    // ── Keyboard Navigation ───────────────────────────
     document.querySelectorAll('.mode-card').forEach(function (card) {
         card.addEventListener('keydown', function (e) {
             if (e.key === 'Enter' || e.key === ' ') {
@@ -166,7 +323,7 @@
         });
     });
 
-    // 3D tilt effect on mode cards
+    // ── 3D Tilt Effect on Mode Cards ──────────────────
     document.querySelectorAll('.mode-card').forEach(function (card) {
         card.addEventListener('mousemove', function (e) {
             var rect = card.getBoundingClientRect();
@@ -178,7 +335,6 @@
             var rotateX = -(y - centerY) / centerY * 6;
             card.style.transform = 'perspective(800px) rotateX(' + rotateX + 'deg) rotateY(' + rotateY + 'deg) translateY(-8px)';
 
-            // Update shine position
             var shine = card.querySelector('.tilt-shine');
             if (!shine) {
                 shine = document.createElement('div');
