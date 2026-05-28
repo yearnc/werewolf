@@ -143,6 +143,8 @@ function triggerBloodMoon() {
     if (!moon) return;
     moon.classList.add('blood-moon');
     document.body.classList.add('blood-moon-active');
+    triggerScreenGlow('death');
+    triggerScreenShake();
     setTimeout(function () {
         moon.classList.remove('blood-moon');
         document.body.classList.remove('blood-moon-active');
@@ -159,6 +161,8 @@ function renderState(state) {
     updateEventLog(state);
     updateDecisionZone(state);
     updateThinkingHighlight(state);
+    updateCelestialWheel(state);
+    updateRuneHalo(state);
 
     if (state.human_role_info && !_roleShown) {
         showRoleOverlay(state.human_role_info);
@@ -256,6 +260,9 @@ function updatePlayerGrid(state) {
 
         list.appendChild(card);
     });
+
+    // Add life candles after cards are created
+    updatePlayerCandles();
 }
 
 // ── Event Scroll ────────────────────────────────────
@@ -439,6 +446,9 @@ function renderSpeechBubble(inner, ev, state) {
     var isCampaign = ev.type === 'campaign_speech';
     var isWolf = ev.type === 'wolf_discuss';
 
+    // Trigger screen glow based on speech type
+    if (isWolf) triggerScreenGlow('wolf');
+
     var text = ev.text;
     var colonIdx = text.indexOf('：');
     var speaker, message;
@@ -455,7 +465,7 @@ function renderSpeechBubble(inner, ev, state) {
     var avatarColor = getAvatarColor(ev.player_id);
 
     var row = document.createElement('div');
-    row.className = 'chat-row ' + (isSelf ? 'self' : 'other');
+    row.className = 'chat-row ' + (isSelf ? 'self' : 'other') + ' ink-spread';
 
     // Mini portrait avatar
     var avatar = document.createElement('div');
@@ -881,6 +891,9 @@ function clearSelection() {
 async function submitDecision(decisionId, value) {
     var zone = document.getElementById('decision-zone');
 
+    // Spin rune halo
+    spinRuneHalo();
+
     // Show checkmark feedback overlay
     var overlay = document.createElement('div');
     overlay.className = 'decision-submitted-overlay';
@@ -962,6 +975,215 @@ document.getElementById('btn-exit').addEventListener('click', function () {
         .then(function () { window.location.href = '/'; })
         .catch(function () { window.location.href = '/'; });
 });
+
+// ── Life Candles on Player Portraits ─────────────────
+
+function updatePlayerCandles() {
+    document.querySelectorAll('.player-card').forEach(function (card) {
+        // Remove existing candle
+        var existing = card.querySelector('.player-candle');
+        if (existing) existing.remove();
+
+        var candle = document.createElement('div');
+        candle.className = 'player-candle';
+        card.appendChild(candle);
+    });
+}
+
+// ── Celestial Wheel ──────────────────────────────────
+
+var lastWheelPhase = null;
+
+function updateCelestialWheel(state) {
+    var ring = document.querySelector('.celestial-ring');
+    if (!ring || !state.phase) return;
+
+    if (state.phase !== lastWheelPhase && lastWheelPhase !== null) {
+        ring.classList.remove('turning');
+        void ring.offsetWidth; // force reflow
+        ring.classList.add('turning');
+    }
+    lastWheelPhase = state.phase;
+}
+
+// ── Rune Halo around Decision Zone ───────────────────
+
+var RUNE_TYPE_MAP = {
+    wolf_kill: 'wolf-runes',
+    wolf_discussion: 'wolf-runes',
+    seer_check: 'seer-runes',
+    witch_decision: 'witch-runes',
+    hunter_shot: 'hunter-runes',
+    sheriff_candidacy: 'sheriff-runes',
+    sheriff_vote: 'sheriff-runes',
+    sheriff_withdraw: 'sheriff-runes',
+    sheriff_destroy_badge: 'sheriff-runes',
+    sheriff_successor: 'sheriff-runes',
+    campaign_speech: 'sheriff-runes',
+};
+
+function updateRuneHalo(state) {
+    var zone = document.getElementById('decision-zone');
+    if (!zone || !state.waiting_for_human) {
+        // Remove halo when not needed
+        var existing = zone && zone.querySelector('.rune-halo');
+        if (existing) existing.remove();
+        return;
+    }
+
+    var halo = zone.querySelector('.rune-halo');
+    if (!halo) {
+        halo = document.createElement('div');
+        halo.className = 'rune-halo';
+        zone.appendChild(halo);
+    }
+
+    // Set rune type class
+    var runeClass = RUNE_TYPE_MAP[state.decision_type] || 'default-runes';
+    halo.className = 'rune-halo ' + runeClass;
+}
+
+// Rune spin on decision submit
+function spinRuneHalo() {
+    var halo = document.querySelector('.rune-halo');
+    if (!halo) return;
+    halo.classList.add('spinning');
+    setTimeout(function () {
+        halo.classList.remove('spinning');
+    }, 600);
+}
+
+// ── Screen Edge Glow ─────────────────────────────────
+
+var glowTimeout = null;
+
+function triggerScreenGlow(type) {
+    var overlay = document.getElementById('screen-glow');
+    if (!overlay) return;
+
+    var glowClass = '';
+    switch (type) {
+        case 'wolf':   glowClass = 'wolf-glow'; break;
+        case 'seer':   glowClass = 'seer-glow'; break;
+        case 'witch':  glowClass = 'witch-glow'; break;
+        case 'death':  glowClass = 'wolf-glow'; break;
+    }
+
+    overlay.className = 'screen-glow-overlay ' + glowClass;
+
+    clearTimeout(glowTimeout);
+    glowTimeout = setTimeout(function () {
+        overlay.className = 'screen-glow-overlay';
+    }, 2000);
+}
+
+// Screen shake on death
+function triggerScreenShake() {
+    document.body.classList.add('screen-shake');
+    setTimeout(function () {
+        document.body.classList.remove('screen-shake');
+    }, 400);
+}
+
+// ── Ink Spread Animation on new messages ─────────────
+
+function renderSystemMsg(inner, ev) {
+    removeTypingIndicator();
+    var div = document.createElement('div');
+    div.className = 'chat-system ' + ev.type + ' ink-spread';
+    div.textContent = ev.text;
+
+    // Trigger screen effects based on event type
+    if (ev.type === 'death' || ev.type === 'wolf_action') {
+        triggerScreenGlow('death');
+        triggerScreenShake();
+    }
+    if (ev.type === 'seer_check') {
+        triggerScreenGlow('seer');
+    }
+    if (ev.type === 'witch_action') {
+        triggerScreenGlow('witch');
+    }
+
+    inner.appendChild(div);
+}
+
+// ── Enhanced Shooting Stars ──────────────────────────
+
+(function initShootingStars() {
+    function createShootingStar() {
+        var isBlood = Math.random() < 0.2;
+        var star = document.createElement('div');
+        star.className = 'shooting-star-enhanced' + (isBlood ? ' blood-star' : '');
+        star.style.top = (Math.random() * 25) + '%';
+        star.style.left = (Math.random() * 70 + 15) + '%';
+        star.style.transform = 'rotate(-25deg)';
+
+        var head = document.createElement('div');
+        head.className = 'star-head';
+        star.appendChild(head);
+
+        var trail = document.createElement('div');
+        trail.className = 'star-trail';
+        trail.style.right = '2px';
+        star.appendChild(trail);
+
+        var particlesDiv = document.createElement('div');
+        particlesDiv.className = 'star-particles';
+        for (var i = 0; i < 6; i++) {
+            var p = document.createElement('div');
+            p.className = 'star-particle';
+            p.style.right = (i * 12 + 5) + 'px';
+            p.style.animationDelay = (i * 0.08) + 's';
+            particlesDiv.appendChild(p);
+        }
+        star.appendChild(particlesDiv);
+
+        document.body.appendChild(star);
+        setTimeout(function () { star.remove(); }, 2000);
+    }
+
+    createShootingStar();
+    setInterval(function () {
+        if (Math.random() < 0.35) createShootingStar();
+    }, 7000);
+})();
+
+// ── Story Fragments ──────────────────────────────────
+
+(function initStoryFragments() {
+    var STORY_FRAGMENTS = [
+        '第三夜…村庄陷入恐慌…',
+        '狼人的嚎叫划破夜空…',
+        '预言家在月光下窥见真相…',
+        '女巫的坩埚冒着幽绿的气泡…',
+        '猎人的弓弦已经拉满…',
+        '昨晚没有人死亡，是个平安夜…',
+        '信任与背叛，只在一步之遥…',
+        '谁是狼人？谁是好人？',
+        '月色如水，杀戮无声…',
+        '守卫在黑暗中守望…',
+        '清晨的阳光揭开了新的牺牲者…',
+    ];
+
+    function spawnStoryFragment() {
+        var container = document.getElementById('story-fragments');
+        if (!container) return;
+        var frag = document.createElement('div');
+        frag.className = 'story-fragment';
+        frag.textContent = STORY_FRAGMENTS[Math.floor(Math.random() * STORY_FRAGMENTS.length)];
+        frag.style.left = (Math.random() * 70 + 15) + '%';
+        frag.style.top = (Math.random() * 40 + 30) + '%';
+        frag.style.animationDuration = (Math.random() * 8 + 12) + 's';
+        container.appendChild(frag);
+        setTimeout(function () { frag.remove(); }, 16000);
+    }
+
+    spawnStoryFragment();
+    setInterval(function () {
+        if (Math.random() < 0.5) spawnStoryFragment();
+    }, 9000);
+})();
 
 // ── Kickoff ─────────────────────────────────────────
 setupDecisionZoneDelegation();
